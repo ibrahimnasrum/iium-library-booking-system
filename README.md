@@ -2,7 +2,14 @@
 
 A fully integrated JavaFX-based library room booking system for IIUM (International Islamic University Malaysia).
 
+<<<<<<< HEAD
 ## ✨ Features
+=======
+## Team Members Contribution
+- **Izwan**: Login & Main Navigation
+- **Amir**: Room List & Availability
+- **Ibrahim**: Booking Management (Make/Cancel/View)
+>>>>>>> 4fb4bff4c541bfc1d52da9f1d4dc27404d1691b2
 
 - 🔐 **User Authentication** - Login with matric number and password
 - 📋 **Room Listing** - View all available rooms with details
@@ -141,7 +148,13 @@ java --module-path /path/to/javafx-sdk/lib --add-modules javafx.controls Main
 ### Notes
 - This is a standalone component for assignment demonstration
 - Does not require integration with team members' components (Login/RoomList)
-- All data is stored in memory (no database)
+- All data is stored in memory (no database
+
+## Group Members (Group 5)
+1. IBRAHIM BIN NASRUM (2116467): Booking Management (Make/Cancel/View)
+2. MUHAMMAD IZWAN BIN MUHAMMAD ISHAM (2428113): Login & Main Navigation
+3. MOHAMMAD AMIR IMTIYAZ BIN MOHD ANNUAR (2212545): Room List & Availability
+
 - User.makeBooking() and User.cancelBooking() methods are implemented and working
 
 ---
