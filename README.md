@@ -1,33 +1,91 @@
-# IIUM Library Booking System
+# 🏛️ IIUM Library Booking System
 
-A JavaFX-based library room booking system for IIUM (International Islamic University Malaysia).
+A fully integrated JavaFX-based library room booking system for IIUM (International Islamic University Malaysia).
 
-## Team Members
-- **Izwan**: Login & Main Navigation
-- **Amir**: Room List & Availability
-- **Ibrahim**: Booking Management (Make/Cancel/View)
+## ✨ Features
 
-## Ibrahim's Part - Booking Management
+- 🔐 **User Authentication** - Login with matric number and password
+- 📋 **Room Listing** - View all available rooms with details
+- 🔍 **Room Filtering** - Filter by availability status
+- 📅 **Booking Management** - Create, view, and cancel bookings
+- ⏰ **Real-time Availability** - Instant room status updates
+- 📊 **Booking History** - Track all your bookings
+- 🎨 **Intuitive UI** - Clean, modern interface with color-coded status
 
-This repository contains Ibrahim's component: **BookingView.java**
+## 🚀 Quick Start
 
-### Features Implemented
-✅ **Booking Form**
-- Select room from dropdown (ComboBox)
-- Choose start date & time (DatePicker + ComboBox)
-- Choose end date & time (DatePicker + ComboBox)
+### Prerequisites
+- Java 11 or higher
+- JavaFX SDK 21.0.9
 
-✅ **Buttons**
-- **Book Now**: Creates a new booking and updates room availability
-- **Cancel Booking**: Cancels selected booking and makes room available again
-- **Refresh**: Reloads all data
+### Running the System
 
-✅ **My Bookings Display**
-- TableView showing all bookings with:
-  - Booking ID
-  - Room ID
-  - Start Time
-  - End Time
+1. **Compile:**
+```powershell
+$JFX="C:\Program Files\javafx\javafx-sdk-21.0.9\lib"
+javac --module-path "$JFX" --add-modules javafx.controls -d bin src\model\*.java src\GUI\*.java src\Main.java
+```
+
+2. **Run:**
+```powershell
+java --module-path "$JFX" --add-modules javafx.controls -cp bin Main
+```
+
+Or simply use the provided scripts: `run.bat` (Windows) or `run.sh` (Linux/Mac)
+
+## 📖 Documentation
+
+- **[SETUP_AND_RUN.md](SETUP_AND_RUN.md)** - Complete setup and installation guide
+- **[USER_GUIDE.md](USER_GUIDE.md)** - How to use the system
+- **[SYSTEM_FLOW.md](SYSTEM_FLOW.md)** - System architecture and data flow
+- **[INTEGRATION_COMPLETE.md](INTEGRATION_COMPLETE.md)** - Integration summary
+
+## 🏗️ System Architecture
+
+```
+Login → Room List View → Booking View
+  ↓           ↓              ↓
+SessionManager (Manages user & data)
+  ↓           ↓              ↓
+Model Classes (User, Room, Booking)
+```
+
+## 📂 Project Structure
+
+```
+iium-library-booking-system/
+├── src/
+│   ├── model/           # Data models
+│   │   ├── User.java
+│   │   ├── Room.java
+│   │   ├── Booking.java
+│   │   └── SessionManager.java
+│   ├── GUI/             # User interface
+│   │   ├── Login.java
+│   │   ├── RoomListView.java
+│   │   └── BookingView.java
+│   └── Main.java        # Application entry point
+├── bin/                 # Compiled classes
+├── run.bat             # Windows run script
+├── run.sh              # Linux/Mac run script
+└── *.md                # Documentation
+```
+
+## 🎯 How It Works
+
+1. **Login** - Enter your credentials
+2. **Browse Rooms** - View available rooms
+3. **Select Room** - Choose your preferred room
+4. **Make Booking** - Select date/time and confirm
+5. **Manage** - View or cancel your bookings
+
+## 👥 Team
+
+Developed as part of IIUM coursework project
+
+## 📝 License
+
+Educational project for IIUM
   - Status (Active/Cancelled)
 
 ### Project Structure

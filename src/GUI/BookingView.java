@@ -1,4 +1,4 @@
-package com.mycompany.mavenproject1;
+package GUI;
 
 import javafx.application.Application;
 import javafx.beans.property.*;
@@ -12,20 +12,24 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
+import model.Room;
+import model.Booking;
+import model.User;
+import model.SessionManager;
+
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class BookingView extends Application {
 
-    // ===== Mock data (since we're ignoring integration) =====
-    private final ObservableList<Room> rooms = FXCollections.observableArrayList();
-    private final ObservableList<Booking> bookings = FXCollections.observableArrayList();
-    private final AtomicInteger bookingIdCounter = new AtomicInteger(1001);
+    // ===== Data =====
+    private final ObservableList<RoomDisplay> rooms = FXCollections.observableArrayList();
+    private final ObservableList<BookingDisplay> bookings = FXCollections.observableArrayList();
+    private Room initialRoom;
 
     // ===== UI controls =====
-    private ComboBox<Room> roomCombo;
+    private ComboBox<RoomDisplay> roomCombo;
     private DatePicker startDatePicker;
     private ComboBox<String> startTimeCombo;
     private DatePicker endDatePicker;
@@ -34,11 +38,22 @@ public class BookingView extends Application {
     private Label roomAvailabilityLabel;
     private Label statusLabel;
 
-    private TableView<Booking> bookingTable;
+    private TableView<BookingDisplay> bookingTable;
+    
+    // Constructor to accept selected room
+    public BookingView(Room selectedRoom) {
+        this.initialRoom = selectedRoom;
+    }
+    
+    // Default constructor for backward compatibility
+    public BookingView() {
+        this.initialRoom = null;
+    }
 
     @Override
     public void start(Stage stage) {
-        seedRooms();
+        loadRoomsFromSession();
+        loadUserBookings();
 
         // --- Form controls ---
         roomCombo = new ComboBox<>(rooms);
@@ -46,20 +61,30 @@ public class BookingView extends Application {
         roomCombo.setPromptText("Select room...");
         roomCombo.setCellFactory(cb -> new ListCell<>() {
             @Override
-            protected void updateItem(Room item, boolean empty) {
+            protected void updateItem(RoomDisplay item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) setText(null);
-                else setText(item.getRoomId() + " (" + item.getType() + ") - " + (item.isAvailable() ? "Available" : "Booked"));
+                else setText(item.getRoomId() + " (" + item.getType() + ") - " + item.getAvailability());
             }
         });
         roomCombo.setButtonCell(new ListCell<>() {
             @Override
-            protected void updateItem(Room item, boolean empty) {
+            protected void updateItem(RoomDisplay item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) setText("Select room...");
                 else setText(item.getRoomId() + " (" + item.getType() + ")");
             }
         });
+        
+        // Pre-select the initial room if provided
+        if (initialRoom != null) {
+            for (RoomDisplay rd : rooms) {
+                if (rd.getRoomId().equals(initialRoom.getRoomID())) {
+                    roomCombo.setValue(rd);
+                    break;
+                }
+            }
+        }
 
         roomAvailabilityLabel = new Label("Availability: -");
 
@@ -89,23 +114,23 @@ public class BookingView extends Application {
         bookingTable = new TableView<>(bookings);
         bookingTable.setPrefHeight(260);
 
-        TableColumn<Booking, Integer> colId = new TableColumn<>("Booking ID");
+        TableColumn<BookingDisplay, String> colId = new TableColumn<>("Booking ID");
         colId.setCellValueFactory(new PropertyValueFactory<>("bookingId"));
         colId.setPrefWidth(100);
 
-        TableColumn<Booking, String> colRoom = new TableColumn<>("Room");
+        TableColumn<BookingDisplay, String> colRoom = new TableColumn<>("Room");
         colRoom.setCellValueFactory(new PropertyValueFactory<>("roomId"));
         colRoom.setPrefWidth(90);
 
-        TableColumn<Booking, String> colStart = new TableColumn<>("Start");
-        colStart.setCellValueFactory(c -> new SimpleStringProperty(formatDT(c.getValue().getStart())));
+        TableColumn<BookingDisplay, String> colStart = new TableColumn<>("Start");
+        colStart.setCellValueFactory(new PropertyValueFactory<>("startFormatted"));
         colStart.setPrefWidth(170);
 
-        TableColumn<Booking, String> colEnd = new TableColumn<>("End");
-        colEnd.setCellValueFactory(c -> new SimpleStringProperty(formatDT(c.getValue().getEnd())));
+        TableColumn<BookingDisplay, String> colEnd = new TableColumn<>("End");
+        colEnd.setCellValueFactory(new PropertyValueFactory<>("endFormatted"));
         colEnd.setPrefWidth(170);
 
-        TableColumn<Booking, String> colStatus = new TableColumn<>("Status");
+        TableColumn<BookingDisplay, String> colStatus = new TableColumn<>("Status");
         colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
         colStatus.setPrefWidth(120);
 
@@ -133,7 +158,7 @@ public class BookingView extends Application {
         buttons.setAlignment(Pos.CENTER_LEFT);
 
         VBox root = new VBox(14,
-                title("Booking (GUI Only)"),
+                title("Library Booking System"),
                 form,
                 buttons,
                 new Separator(),
@@ -144,8 +169,11 @@ public class BookingView extends Application {
         );
         root.setPadding(new Insets(16));
 
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        String userInfo = currentUser != null ? currentUser.getMatricNo() : "Guest";
+        
         Scene scene = new Scene(root, 760, 560);
-        stage.setTitle("BookingView - Ibrahim Part (GUI Only)");
+        stage.setTitle("Booking System - " + userInfo);
         stage.setScene(scene);
         stage.show();
     }
@@ -153,12 +181,12 @@ public class BookingView extends Application {
     // ===== Handlers =====
 
     private void handleBookNow() {
-        Room selectedRoom = roomCombo.getValue();
+        RoomDisplay selectedRoom = roomCombo.getValue();
         if (selectedRoom == null) {
             setStatus("Please select a room.");
             return;
         }
-        if (!selectedRoom.isAvailable()) {
+        if (!"Available".equals(selectedRoom.getAvailability())) {
             setStatus("Room " + selectedRoom.getRoomId() + " is not available.");
             return;
         }
@@ -175,94 +203,121 @@ public class BookingView extends Application {
             return;
         }
 
-        // OPTIONAL: simple collision check (same room + overlaps with BOOKED bookings)
-        if (hasOverlap(selectedRoom.getRoomId(), start, end)) {
-            setStatus("This room already has a booking that overlaps the selected time.");
+        // Find actual Room from session
+        Room actualRoom = findRoomById(selectedRoom.getRoomId());
+        if (actualRoom == null) {
+            setStatus("Room not found.");
             return;
         }
 
-        // "User.makeBooking(...)" would be called here in real integration.
-        Booking newBooking = new Booking(
-                bookingIdCounter.getAndIncrement(),
-                selectedRoom.getRoomId(),
-                start,
-                end,
-                "BOOKED"
-        );
-        bookings.add(newBooking);
+        // Get current user
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            setStatus("No user logged in.");
+            return;
+        }
 
-        // Update room availability (minimum interaction requirement)
-        selectedRoom.setAvailable(false);
-        refreshRoomCombo();
-
-        updateRoomAvailabilityLabel(selectedRoom);
-
-        setStatus("Booked successfully: #" + newBooking.getBookingId() + " for room " + selectedRoom.getRoomId());
+        // Make booking through User model
+        boolean success = currentUser.makeBooking(actualRoom, start, end);
+        if (success) {
+            setStatus("Booked successfully for room " + actualRoom.getRoomID());
+            
+            // Refresh display
+            loadRoomsFromSession();
+            loadUserBookings();
+            
+            // Update combo box
+            for (RoomDisplay rd : rooms) {
+                if (rd.getRoomId().equals(actualRoom.getRoomID())) {
+                    roomCombo.setValue(rd);
+                    updateRoomAvailabilityLabel(rd);
+                    break;
+                }
+            }
+        } else {
+            setStatus("Booking failed. Room may already be booked.");
+        }
     }
 
     private void handleCancelBooking() {
-        Booking selected = bookingTable.getSelectionModel().getSelectedItem();
+        BookingDisplay selected = bookingTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
             setStatus("Please select a booking from the table to cancel.");
             return;
         }
-        if (!"BOOKED".equals(selected.getStatus())) {
+        if (!"Active".equals(selected.getStatus())) {
             setStatus("This booking is already " + selected.getStatus() + ".");
             return;
         }
 
-        // "User.cancelBooking(...)" would be called here in real integration.
-        selected.setStatus("CANCELLED");
-        bookingTable.refresh();
+        // Get current user
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            setStatus("No user logged in.");
+            return;
+        }
 
-        // Make room available again (minimum interaction requirement)
-        Room room = findRoomById(selected.getRoomId());
-        if (room != null) {
-            room.setAvailable(true);
-            refreshRoomCombo();
-
-            if (roomCombo.getValue() != null && roomCombo.getValue().getRoomId().equals(room.getRoomId())) {
-                updateRoomAvailabilityLabel(room);
+        // Find the actual booking
+        Booking actualBooking = null;
+        for (Booking b : currentUser.getMyBookings()) {
+            if (b.getBookingID().equals(selected.getBookingId())) {
+                actualBooking = b;
+                break;
             }
         }
 
-        setStatus("Cancelled booking #" + selected.getBookingId() + ". Room is available again.");
+        if (actualBooking != null) {
+            boolean success = currentUser.cancelBooking(actualBooking);
+            if (success) {
+                setStatus("Cancelled booking " + actualBooking.getBookingID() + ". Room is available again.");
+                
+                // Refresh display
+                loadRoomsFromSession();
+                loadUserBookings();
+            } else {
+                setStatus("Failed to cancel booking.");
+            }
+        }
     }
 
     // ===== Helpers =====
 
-    private void seedRooms() {
-        rooms.addAll(
-                new Room("R101", "Lecture", 60, "Block A", true),
-                new Room("R102", "Lab", 30, "Block A", true),
-                new Room("R201", "Meeting", 12, "Block B", true),
-                new Room("R202", "Seminar", 40, "Block B", true)
-        );
+    private void loadRoomsFromSession() {
+        rooms.clear();
+        for (Room r : SessionManager.getInstance().getAllRooms()) {
+            rooms.add(new RoomDisplay(r.getRoomID(), r.getType(), r.getCapacity(), 
+                                      r.getLocation(), r.getAvailabilityStatus()));
+        }
+    }
+    
+    private void loadUserBookings() {
+        bookings.clear();
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            for (Booking b : currentUser.getMyBookings()) {
+                bookings.add(new BookingDisplay(b.getBookingID(), b.getRoomID(), 
+                                                b.getStartTime(), b.getEndTime(), b.getStatus()));
+            }
+        }
     }
 
     private Room findRoomById(String roomId) {
-        for (Room r : rooms) {
-            if (Objects.equals(r.getRoomId(), roomId)) return r;
+        for (Room r : SessionManager.getInstance().getAllRooms()) {
+            if (r.getRoomID().equals(roomId)) return r;
         }
         return null;
     }
 
-    private boolean hasOverlap(String roomId, LocalDateTime start, LocalDateTime end) {
-        for (Booking b : bookings) {
-            if (!"BOOKED".equals(b.getStatus())) continue;
-            if (!Objects.equals(b.getRoomId(), roomId)) continue;
-
-            // Overlap check: start < existingEnd AND end > existingStart
-            if (start.isBefore(b.getEnd()) && end.isAfter(b.getStart())) return true;
-        }
-        return false;
-    }
-
-    private void updateRoomAvailabilityLabel(Room room) {
+    private void updateRoomAvailabilityLabel(RoomDisplay room) {
         if (room == null) {
             roomAvailabilityLabel.setText("Availability: -");
         } else {
-            roomAvailabilityLabel.setText("Availability: " + (room.isAvailable() ? "Available" : "Booked"));
+            roomAvailabilityLabel.setText("Availability: " + room.getAvailability());
+            if ("Available".equals(room.getAvailability())) {
+                roomAvailabilityLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+            } else {
+                roomAvailabilityLabel.setStyle("-fx-text-fill: red;");
+            }
         }
     }
 
@@ -315,34 +370,28 @@ public class BookingView extends Application {
         return hb;
     }
 
-    private void refreshRoomCombo() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-    }
+    // ===== Display Models for JavaFX TableView =====
 
-    // ===== Models =====
-
-    public static class Room {
+    public static class RoomDisplay {
         private final StringProperty roomId = new SimpleStringProperty();
         private final StringProperty type = new SimpleStringProperty();
         private final IntegerProperty capacity = new SimpleIntegerProperty();
         private final StringProperty location = new SimpleStringProperty();
-        private final BooleanProperty available = new SimpleBooleanProperty(true);
+        private final StringProperty availability = new SimpleStringProperty();
 
-        public Room(String roomId, String type, int capacity, String location, boolean available) {
+        public RoomDisplay(String roomId, String type, int capacity, String location, String availability) {
             this.roomId.set(roomId);
             this.type.set(type);
             this.capacity.set(capacity);
             this.location.set(location);
-            this.available.set(available);
+            this.availability.set(availability);
         }
 
         public String getRoomId() { return roomId.get(); }
         public String getType() { return type.get(); }
         public int getCapacity() { return capacity.get(); }
         public String getLocation() { return location.get(); }
-        public boolean isAvailable() { return available.get(); }
-
-        public void setAvailable(boolean v) { available.set(v); }
+        public String getAvailability() { return availability.get(); }
 
         @Override
         public String toString() {
@@ -350,14 +399,14 @@ public class BookingView extends Application {
         }
     }
 
-    public static class Booking {
-        private final IntegerProperty bookingId = new SimpleIntegerProperty();
+    public static class BookingDisplay {
+        private final StringProperty bookingId = new SimpleStringProperty();
         private final StringProperty roomId = new SimpleStringProperty();
         private final ObjectProperty<LocalDateTime> start = new SimpleObjectProperty<>();
         private final ObjectProperty<LocalDateTime> end = new SimpleObjectProperty<>();
         private final StringProperty status = new SimpleStringProperty();
 
-        public Booking(int bookingId, String roomId, LocalDateTime start, LocalDateTime end, String status) {
+        public BookingDisplay(String bookingId, String roomId, LocalDateTime start, LocalDateTime end, String status) {
             this.bookingId.set(bookingId);
             this.roomId.set(roomId);
             this.start.set(start);
@@ -365,13 +414,19 @@ public class BookingView extends Application {
             this.status.set(status);
         }
 
-        public int getBookingId() { return bookingId.get(); }
+        public String getBookingId() { return bookingId.get(); }
         public String getRoomId() { return roomId.get(); }
         public LocalDateTime getStart() { return start.get(); }
         public LocalDateTime getEnd() { return end.get(); }
         public String getStatus() { return status.get(); }
-
-        public void setStatus(String s) { status.set(s); }
+        
+        public String getStartFormatted() {
+            return formatDT(getStart());
+        }
+        
+        public String getEndFormatted() {
+            return formatDT(getEnd());
+        }
     }
 
     public static void main(String[] args) {
