@@ -32,9 +32,15 @@ public class BookingPage extends VBox {
     private Button bookButton;
     private TextArea bookingSummaryArea;
     private Label statusLabel;
+    private Runnable onBookingChangedCallback;
 
     public BookingPage(User user) {
+        this(user, null);
+    }
+
+    public BookingPage(User user, Runnable onBookingChangedCallback) {
         this.currentUser = user;
+        this.onBookingChangedCallback = onBookingChangedCallback;
         initializeComponents();
         setupLayout();
         loadData();
@@ -299,6 +305,11 @@ public class BookingPage extends VBox {
             selectedFacility = null;
             bookingSummaryArea.clear();
             loadData(); // Refresh available facilities
+
+            // Notify that booking status changed
+            if (onBookingChangedCallback != null) {
+                onBookingChangedCallback.run();
+            }
         } else {
             showToast("❌ Booking failed. Check availability and eligibility.", "error");
         }

@@ -25,10 +25,11 @@ if not exist %FX_PATH% (
     echo 4. Make sure C:\Program Files\javafx-sdk-21.0.9\lib folder exists
     echo 5. Edit this run.bat file and set FX_PATH correctly
     echo.
-    pause
-    exit /b 1
+    echo Continuing automatically...
+    goto :continue
 )
 
+:continue
 echo.
 echo Compiling Java files...
 if not exist bin mkdir bin
@@ -48,6 +49,4 @@ echo.
 echo Starting IIUM Library Booking System...
 echo.
 java --module-path %FX_PATH% --add-modules javafx.controls,javafx.fxml -cp bin view.MainApplication
-
-pause
 

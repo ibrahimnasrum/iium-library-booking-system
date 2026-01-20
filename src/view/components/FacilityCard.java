@@ -5,8 +5,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
 import model.Facility;
 import model.enums.FacilityStatus;
 import model.enums.ReservationPrivilege;
@@ -15,6 +15,7 @@ public class FacilityCard extends VBox {
 
     private Facility facility;
     private Runnable onCardClicked;
+    private VBox contentBox;
 
     public FacilityCard(Facility facility) {
         this.facility = facility;
@@ -22,79 +23,55 @@ public class FacilityCard extends VBox {
     }
 
     private void setupCard() {
-        setPrefSize(200, 250);
-        getStyleClass().add("card");
-        setSpacing(10);
-        setPadding(new Insets(15));
-        setAlignment(Pos.TOP_CENTER);
+        setPrefSize(180, 140); // Increased height from 120 to 140 to accommodate status
+        setAlignment(Pos.CENTER); // Center the content in the StackPane
 
-        // Image placeholder (would load actual image in real implementation)
-        ImageView imageView = new ImageView();
-        try {
-            // Try to load image from facility's imagePath
-            if (facility.getImagePath() != null && !facility.getImagePath().isEmpty()) {
-                Image image = new Image(facility.getImagePath(), 150, 100, true, true);
-                imageView.setImage(image);
-            } else {
-                // Default placeholder
-                Image placeholder = new Image("https://via.placeholder.com/150x100/3498db/ffffff?text=" +
-                    facility.getType().toString().charAt(0), 150, 100, false, true);
-                imageView.setImage(placeholder);
-            }
-        } catch (Exception e) {
-            // Fallback placeholder
-            Image placeholder = new Image("https://via.placeholder.com/150x100/95a5a6/ffffff?text=No+Image",
-                150, 100, false, true);
-            imageView.setImage(placeholder);
-        }
-        imageView.setFitWidth(150);
-        imageView.setFitHeight(100);
-        imageView.setPreserveRatio(true);
+        // Create content VBox
+        contentBox = new VBox(4); // Reduced spacing from 8 to 4
+        contentBox.setSpacing(4);
+        contentBox.setPadding(new Insets(10)); // Reduced padding from 15 to 10
+        contentBox.setAlignment(Pos.TOP_CENTER);
+        contentBox.setPrefSize(180, 140); // Make sure it fills the entire card
 
-        // Facility name
+        // Add colorful background based on facility type with very thin black outline and enhanced shadow
+        String backgroundColor = getFacilityTypeColor(facility.getType());
+        contentBox.setStyle("-fx-background-color: " + backgroundColor + "; -fx-background-radius: 15; -fx-border-color: #000000; -fx-border-width: 0.5; -fx-border-radius: 15; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 12, 0.4, 0, 6);");
+
+        // Facility icon at the top
+        Label iconLabel = new Label(getFacilityIcon(facility.getType()));
+        iconLabel.setStyle("-fx-font-size: 24px; -fx-text-fill: #000000; -fx-font-weight: bold;");
+        iconLabel.setAlignment(Pos.CENTER);
+
+        // Facility name (centered, black text, better typography)
         Label nameLabel = new Label(facility.getName());
-        nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #000000; -fx-text-alignment: center;");
         nameLabel.setWrapText(true);
-        nameLabel.setMaxWidth(180);
+        nameLabel.setMaxWidth(150);
 
-        // Facility ID
-        Label idLabel = new Label(facility.getId());
-        idLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
+        // Facility type (smaller, dark gray text)
+        Label typeLabel = new Label(facility.getType().toString().replace("_", " "));
+        typeLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #000000; -fx-text-alignment: center; -fx-font-style: italic; -fx-font-weight: bold;");
+        typeLabel.setWrapText(true);
+        typeLabel.setMaxWidth(150);
 
-        // Status badge
-        Label statusLabel = new Label(facility.getStatus().toString());
+        // Status badge - positioned at bottom center
+        Label statusLabel = new Label(getStatusDisplayText(facility.getStatus()));
         statusLabel.getStyleClass().add(getStatusBadgeClass(facility.getStatus()));
+        statusLabel.setStyle(statusLabel.getStyle() + "; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0.5, 0, 1);");
 
-        // Privilege badge
-        Label privilegeLabel = new Label(getPrivilegeDisplayText(facility.getPrivilege()));
-        privilegeLabel.getStyleClass().add(getPrivilegeBadgeClass(facility.getPrivilege()));
+        contentBox.getChildren().addAll(iconLabel, nameLabel, typeLabel, statusLabel);
 
-        // Badges container
-        HBox badgesContainer = new HBox(8);
-        badgesContainer.getChildren().addAll(statusLabel, privilegeLabel);
-        badgesContainer.setAlignment(Pos.CENTER);
-
-        // Capacity and location
-        Label capacityLabel = new Label("Capacity: " + facility.getCapacity());
-        capacityLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
-
-        Label locationLabel = new Label(facility.getLocation());
-        locationLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
-        locationLabel.setWrapText(true);
-        locationLabel.setMaxWidth(180);
-
-        // Click handler
+        // Add the content box to the VBox
+        getChildren().add(contentBox);
         setOnMouseClicked(e -> {
             if (onCardClicked != null) {
                 onCardClicked.run();
             }
         });
 
-        // Hover effects
-        setOnMouseEntered(e -> getStyleClass().add("card-hover"));
-        setOnMouseExited(e -> getStyleClass().remove("card-hover"));
-
-        getChildren().addAll(imageView, nameLabel, idLabel, badgesContainer, capacityLabel, locationLabel);
+        // Enhanced hover effects
+        setOnMouseEntered(e -> contentBox.setStyle("-fx-background-color: " + backgroundColor + "; -fx-background-radius: 15; -fx-border-color: #333333; -fx-border-width: 1; -fx-border-radius: 15; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 16, 0.5, 0, 8);"));
+        setOnMouseExited(e -> contentBox.setStyle("-fx-background-color: " + backgroundColor + "; -fx-background-radius: 15; -fx-border-color: #000000; -fx-border-width: 0.5; -fx-border-radius: 15; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 12, 0.4, 0, 6);"));
     }
 
     private String getStatusColor(FacilityStatus status) {
@@ -132,16 +109,14 @@ public class FacilityCard extends VBox {
         }
     }
 
-    private String getPrivilegeDisplayText(ReservationPrivilege privilege) {
-        switch (privilege) {
-            case OPEN: return "OPEN";
-            case STUDENT_ONLY: return "STUDENT";
-            case STAFF_ONLY: return "STAFF";
-            case POSTGRADUATE_ONLY: return "POSTGRAD";
-            case BOOK_VENDORS_ONLY: return "VENDOR";
-            case LIBRARY_USE_ONLY: return "LIBRARY";
-            case SPECIAL_NEEDS_ONLY: return "SPECIAL";
-            default: return "OPEN";
+    private String getStatusDisplayText(model.enums.FacilityStatus status) {
+        switch (status) {
+            case AVAILABLE: return "✓ AVAILABLE";
+            case BOOKED: return "🔒 BOOKED";
+            case TEMPORARILY_CLOSED: return "⛔ CLOSED";
+            case MAINTENANCE: return "🔧 MAINTENANCE";
+            case RESERVED: return "📅 RESERVED";
+            default: return "❓ UNKNOWN";
         }
     }
 
@@ -149,7 +124,57 @@ public class FacilityCard extends VBox {
         return facility;
     }
 
+    public void updateStatus(model.enums.FacilityStatus newStatus) {
+        facility.setStatus(newStatus);
+        // Find and update the status label (it's the last child in contentBox)
+        if (contentBox.getChildren().size() > 0) {
+            javafx.scene.Node lastNode = contentBox.getChildren().get(contentBox.getChildren().size() - 1);
+            if (lastNode instanceof Label) {
+                Label statusLabel = (Label) lastNode;
+                statusLabel.setText(getStatusDisplayText(newStatus));
+                // Clear existing style classes and add the new one
+                statusLabel.getStyleClass().clear();
+                statusLabel.getStyleClass().add(getStatusBadgeClass(newStatus));
+                statusLabel.setStyle(statusLabel.getStyle() + "; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0.5, 0, 1);");
+            }
+        }
+    }
+
     public void setOnCardClicked(Runnable handler) {
         this.onCardClicked = handler;
+    }
+
+    private String getFacilityIcon(model.enums.FacilityType type) {
+        switch (type) {
+            case ROOM: return "🏠";
+            case STUDY_AREA: return "📚";
+            case COMPUTER_LAB: return "💻";
+            case AUDITORIUM: return "🎭";
+            case EXHIBITION_AREA: return "🎨";
+            case VIEWING_ROOM: return "📺";
+            case DISCUSSION_ROOM: return "💬";
+            case CARREL_ROOM: return "👤";
+            case RESEARCH_ROOM: return "🔬";
+            case MULTI_PURPOSE_ROOM: return "🏢";
+            case SPECIAL_NEEDS_ROOM: return "♿";
+            default: return "🏢";
+        }
+    }
+
+    private String getFacilityTypeColor(model.enums.FacilityType type) {
+        switch (type) {
+            case ROOM: return "#87CEEB"; // Sky blue
+            case STUDY_AREA: return "#FFB6C1"; // Light pink
+            case COMPUTER_LAB: return "#98FB98"; // Pale green
+            case AUDITORIUM: return "#FFA07A"; // Light salmon
+            case EXHIBITION_AREA: return "#DDA0DD"; // Plum
+            case VIEWING_ROOM: return "#B0E0E6"; // Powder blue
+            case DISCUSSION_ROOM: return "#FFFFE0"; // Light yellow
+            case CARREL_ROOM: return "#F0E68C"; // Khaki
+            case RESEARCH_ROOM: return "#D8BFD8"; // Thistle
+            case MULTI_PURPOSE_ROOM: return "#FFC0CB"; // Pink
+            case SPECIAL_NEEDS_ROOM: return "#AFEEEE"; // Pale turquoise
+            default: return "#F0F8FF"; // Alice blue
+        }
     }
 }

@@ -22,6 +22,10 @@ public class MainLayout extends BorderPane {
     private BookingPage bookingPage;
     private MyBookingsPage myBookingsPage;
     private AdminPanelPage adminPanelPage;
+    private FacilityDetailPage facilityDetailPage;
+
+    // Shared state
+    private model.Facility selectedFacility;
 
     // Navigation buttons
     private Button dashboardBtn;
@@ -40,9 +44,10 @@ public class MainLayout extends BorderPane {
 
     private void initializePages() {
         dashboardPage = new DashboardPage(currentUser, this::showPage);
-        facilitiesPage = new FacilitiesPage(currentUser);
-        bookingPage = new BookingPage(currentUser);
+        facilitiesPage = new FacilitiesPage(currentUser, this::navigateToFacilityDetail);
+        bookingPage = new BookingPage(currentUser, this::refreshFacilitiesPage);
         myBookingsPage = new MyBookingsPage(currentUser);
+        facilityDetailPage = new FacilityDetailPage(currentUser, this::showPage);
 
         // Only create admin panel if user is admin
         if (currentUser.getRole().toString().equals("ADMIN")) {
@@ -117,7 +122,7 @@ public class MainLayout extends BorderPane {
         dashboardBtn = createNavButton("🏠 Dashboard", "dashboard");
         facilitiesBtn = createNavButton("🏢 Facilities", "facilities");
         bookingBtn = createNavButton("📅 Book Now", "booking");
-        myBookingsBtn = createNavButton("📋 My Bookings", "mybookings");
+        myBookingsBtn = createNavButton("📋 My Bookings", "my-bookings");
 
         navBox.getChildren().addAll(dashboardBtn, facilitiesBtn, bookingBtn, myBookingsBtn);
 
@@ -194,11 +199,21 @@ public class MainLayout extends BorderPane {
                 content = facilitiesPage;
                 setActiveButton(facilitiesBtn);
                 break;
+            case "facility-detail":
+                if (facilityDetailPage != null && selectedFacility != null) {
+                    facilityDetailPage.setFacility(selectedFacility);
+                    content = facilityDetailPage;
+                    // Don't set active button for detail pages
+                } else {
+                    content = facilitiesPage;
+                    setActiveButton(facilitiesBtn);
+                }
+                break;
             case "booking":
                 content = bookingPage;
                 setActiveButton(bookingBtn);
                 break;
-            case "mybookings":
+            case "my-bookings":
                 content = myBookingsPage;
                 setActiveButton(myBookingsBtn);
                 break;
@@ -221,6 +236,17 @@ public class MainLayout extends BorderPane {
         // Set center content
         setCenter(content);
         System.out.println("Page switched to: " + pageId);
+    }
+
+    private void navigateToFacilityDetail(model.Facility facility) {
+        this.selectedFacility = facility;
+        showPage("facility-detail");
+    }
+
+    public void refreshFacilitiesPage() {
+        if (facilitiesPage != null) {
+            facilitiesPage.refreshFacilityStatuses();
+        }
     }
 
     private void resetButtonStyles() {

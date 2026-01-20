@@ -185,7 +185,7 @@ public class DashboardPage extends VBox {
         myBookingsButton.setOnAction(e -> {
             System.out.println("View My Bookings button clicked!");
             if (navigateCallback != null) {
-                navigateCallback.accept("mybookings");
+                navigateCallback.accept("my-bookings");
             } else {
                 System.out.println("Navigate callback is null!");
             }

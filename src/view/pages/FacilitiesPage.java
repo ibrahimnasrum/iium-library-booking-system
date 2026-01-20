@@ -17,11 +17,15 @@ import model.services.FacilityService;
 import view.components.FacilityCard;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.HashMap;
 
 public class FacilitiesPage extends VBox {
 
     private User currentUser;
+    private Consumer<Facility> navigateToDetailCallback;
     private ObservableList<Facility> facilitiesList;
     private ObservableList<Facility> filteredFacilitiesList;
 
@@ -32,11 +36,14 @@ public class FacilitiesPage extends VBox {
     private ComboBox<String> filterTypeCombo;
     private ComboBox<String> filterLocationCombo;
     private ComboBox<String> filterStatusCombo;
-    private TextArea facilityDetailsArea;
-    private Facility selectedFacility;
 
-    public FacilitiesPage(User user) {
+    // Store facility cards for dynamic updates
+    private Map<Facility, FacilityCard> facilityCardMap;
+
+    public FacilitiesPage(User user, Consumer<Facility> navigateToDetailCallback) {
         this.currentUser = user;
+        this.navigateToDetailCallback = navigateToDetailCallback;
+        this.facilityCardMap = new HashMap<>();
         initializeComponents();
         setupLayout();
         loadData();
@@ -71,18 +78,12 @@ public class FacilitiesPage extends VBox {
         filterStatusCombo.setValue("All Status");
         filterStatusCombo.setStyle("-fx-font-size: 14px;");
         filterStatusCombo.setOnAction(e -> filterFacilities());
-
-        // Facility details area
-        facilityDetailsArea = new TextArea();
-        facilityDetailsArea.setEditable(false);
-        facilityDetailsArea.setPrefRowCount(8);
-        facilityDetailsArea.setStyle("-fx-font-size: 14px; -fx-background-color: #f8f9fa; -fx-border-color: #dee2e6; -fx-border-radius: 5;");
     }
 
     private void setupLayout() {
         setSpacing(20);
         setPadding(new Insets(30));
-        setStyle("-fx-background-color: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);");
+        setStyle("-fx-background-color: linear-gradient(to bottom right, #e3f2fd 0%, #f3e5f5 25%, #fff3e0 50%, #e8f5e8 75%, #fce4ec 100%); -fx-background-radius: 0;");
 
         // Header
         VBox headerBox = createHeader();
@@ -93,10 +94,7 @@ public class FacilitiesPage extends VBox {
         // Facilities display section
         VBox facilitiesSection = createFacilitiesSection();
 
-        // Facility details section
-        VBox detailsSection = createDetailsSection();
-
-        getChildren().addAll(headerBox, searchSection, facilitiesSection, detailsSection);
+        getChildren().addAll(headerBox, searchSection, facilitiesSection);
     }
 
     private VBox createHeader() {
@@ -166,34 +164,21 @@ public class FacilitiesPage extends VBox {
         return facilitiesBox;
     }
 
-    private VBox createDetailsSection() {
-        VBox detailsBox = new VBox(15);
-        detailsBox.setPadding(new Insets(20));
-        detailsBox.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0.1, 0, 3);");
-
-        Label detailsTitle = new Label("📄 Facility Details");
-        detailsTitle.setFont(Font.font("Arial", FontWeight.BOLD, 18));
-        detailsTitle.setStyle("-fx-text-fill: #2c3e50;");
-
-        detailsBox.getChildren().addAll(detailsTitle, facilityDetailsArea);
-        return detailsBox;
-    }
-
     private void updateFacilitiesDisplay() {
         facilitiesContainer.getChildren().clear();
+        facilityCardMap.clear();
 
         for (Facility facility : filteredFacilitiesList) {
             FacilityCard card = new FacilityCard(facility);
 
+            // Store reference for dynamic updates
+            facilityCardMap.put(facility, card);
+
             // Make card clickable
             card.setOnMouseClicked(e -> {
-                selectedFacility = facility;
-                facilityDetailsArea.setText(facility.getDetailedInfo());
-                // Highlight selected card
-                for (var child : facilitiesContainer.getChildren()) {
-                    child.setStyle("-fx-background-color: white; -fx-border-color: #ddd; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8;");
+                if (navigateToDetailCallback != null) {
+                    navigateToDetailCallback.accept(facility);
                 }
-                card.setStyle("-fx-background-color: #e3f2fd; -fx-border-color: #2196f3; -fx-border-width: 3; -fx-border-radius: 8; -fx-background-radius: 8;");
             });
 
             facilitiesContainer.getChildren().add(card);
@@ -205,6 +190,23 @@ public class FacilitiesPage extends VBox {
         List<Facility> facilities = FacilityService.getAllFacilities();
         facilitiesList.clear();
         facilitiesList.addAll(facilities);
+        filterFacilities();
+    }
+
+    public void refreshFacilityStatuses() {
+        // Reload facilities data
+        List<Facility> updatedFacilities = FacilityService.getAllFacilities();
+
+        // Update each facility and its corresponding card
+        for (Facility updatedFacility : updatedFacilities) {
+            FacilityCard card = facilityCardMap.get(updatedFacility);
+            if (card != null) {
+                // Update the card's status display
+                card.updateStatus(updatedFacility.getStatus());
+            }
+        }
+
+        // Refresh the filtered list
         filterFacilities();
     }
 
