@@ -46,6 +46,8 @@ public class StudentDashboard extends VBox {
     private Label statusLabel;
     private TextArea facilityDetailsArea;
     private Facility selectedFacility;
+    private HBox summaryCards;
+    private Button bookButton;
 
     public StudentDashboard(User user) {
         this.currentUser = user;
@@ -97,6 +99,9 @@ public class StudentDashboard extends VBox {
         startTimeCombo.setValue("09:00");
         endTimeCombo.setValue("10:00");
 
+        // Create summary cards
+        summaryCards = createSummaryCards();
+
         // Tables
         setupFacilitiesCards();
         setupBookingsTable();
@@ -136,6 +141,7 @@ public class StudentDashboard extends VBox {
             card.setOnMouseClicked(e -> {
                 selectedFacility = facility;
                 facilityDetailsArea.setText(facility.getDetailedInfo());
+                updateBookingButtonState(); // Update button state when facility is selected
                 // Highlight selected card
                 for (var child : facilitiesContainer.getChildren()) {
                     child.setStyle("-fx-background-color: white; -fx-border-color: #ddd; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;");
@@ -173,6 +179,95 @@ public class StudentDashboard extends VBox {
         statusCol.setPrefWidth(100);
 
         bookingsTable.getColumns().addAll(idCol, facilityCol, startCol, endCol, statusCol);
+    }
+
+    private HBox createSummaryCards() {
+        HBox cardsContainer = new HBox(20);
+        cardsContainer.setAlignment(Pos.CENTER);
+
+        // Get facility statistics
+        List<Facility> allFacilities = FacilityService.getAllFacilities();
+        long totalFacilities = allFacilities.size();
+        long availableCount = allFacilities.stream().filter(f -> f.getStatus().toString().equals("AVAILABLE")).count();
+        long bookedCount = allFacilities.stream().filter(f -> f.getStatus().toString().equals("BOOKED")).count();
+        long closedCount = allFacilities.stream().filter(f ->
+            f.getStatus().toString().equals("TEMPORARILY_CLOSED") ||
+            f.getStatus().toString().equals("MAINTENANCE")).count();
+
+        // Create summary cards
+        VBox totalCard = createSummaryCard("🏢 Total Facilities", String.valueOf(totalFacilities), "#3b82f6");
+        VBox availableCard = createSummaryCard("✅ Available", String.valueOf(availableCount), "#22c55e");
+        VBox bookedCard = createSummaryCard("📅 Booked", String.valueOf(bookedCount), "#f59e0b");
+        VBox closedCard = createSummaryCard("🚫 Closed/Maint", String.valueOf(closedCount), "#ef4444");
+
+        cardsContainer.getChildren().addAll(totalCard, availableCard, bookedCard, closedCard);
+        return cardsContainer;
+    }
+
+    private VBox createSummaryCard(String title, String value, String color) {
+        VBox card = new VBox(8);
+        card.setAlignment(Pos.CENTER);
+        card.setPrefSize(180, 100);
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 14; -fx-padding: 16; " +
+                     "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 18, 0.2, 0, 6);");
+
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+
+        Label valueLabel = new Label(value);
+        valueLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
+
+        card.getChildren().addAll(titleLabel, valueLabel);
+        return card;
+    }
+
+    private void refreshSummaryCards() {
+        // Get updated facility statistics
+        List<Facility> allFacilities = FacilityService.getAllFacilities();
+        long totalFacilities = allFacilities.size();
+        long availableCount = allFacilities.stream().filter(f -> f.getStatus().toString().equals("AVAILABLE")).count();
+        long bookedCount = allFacilities.stream().filter(f -> f.getStatus().toString().equals("BOOKED")).count();
+        long closedCount = allFacilities.stream().filter(f ->
+            f.getStatus().toString().equals("TEMPORARILY_CLOSED") ||
+            f.getStatus().toString().equals("MAINTENANCE")).count();
+
+        // Update existing cards if they exist
+        if (summaryCards != null && summaryCards.getChildren().size() >= 4) {
+            updateSummaryCard((VBox) summaryCards.getChildren().get(0), "🏢 Total Facilities", String.valueOf(totalFacilities));
+            updateSummaryCard((VBox) summaryCards.getChildren().get(1), "✅ Available", String.valueOf(availableCount));
+            updateSummaryCard((VBox) summaryCards.getChildren().get(2), "📅 Booked", String.valueOf(bookedCount));
+            updateSummaryCard((VBox) summaryCards.getChildren().get(3), "🚫 Closed/Maint", String.valueOf(closedCount));
+        }
+    }
+
+    private void updateSummaryCard(VBox card, String title, String value) {
+        if (card.getChildren().size() >= 2) {
+            Label titleLabel = (Label) card.getChildren().get(0);
+            Label valueLabel = (Label) card.getChildren().get(1);
+            titleLabel.setText(title);
+            valueLabel.setText(value);
+        }
+    }
+
+    private void updateBookingButtonState() {
+        if (selectedFacility == null) {
+            bookButton.setDisable(true);
+            bookButton.setText("Book Selected Facility");
+            return;
+        }
+
+        // Check if facility is available for booking
+        boolean isAvailable = selectedFacility.getStatus().toString().equals("AVAILABLE");
+        boolean isNotClosed = !selectedFacility.getStatus().toString().equals("TEMPORARILY_CLOSED") &&
+                             !selectedFacility.getStatus().toString().equals("MAINTENANCE");
+
+        if (!isAvailable || !isNotClosed) {
+            bookButton.setDisable(true);
+            bookButton.setText("Facility Not Available");
+        } else {
+            bookButton.setDisable(false);
+            bookButton.setText("Book Selected Facility");
+        }
     }
 
     private void setupLayout() {
@@ -213,8 +308,10 @@ public class StudentDashboard extends VBox {
             new Label("End Time:"), endTimeCombo
         );
 
-        Button bookButton = new Button("Book Selected Facility");
+        bookButton = new Button("Book Selected Facility");
+        bookButton.getStyleClass().add("primary-btn");
         bookButton.setOnAction(e -> handleBooking());
+        bookButton.setDisable(true); // Initially disabled until facility is selected
 
         bookingSection.getChildren().addAll(
             new Label("Make a Booking:"),
@@ -236,6 +333,7 @@ public class StudentDashboard extends VBox {
         // Main layout
         getChildren().addAll(
             topSection,
+            summaryCards,
             searchSection,
             facilitiesSection,
             bookingSection,
@@ -254,6 +352,12 @@ public class StudentDashboard extends VBox {
         List<Booking> userBookings = BookingService.getBookingsForUser(currentUser.getMatricNo());
         bookingsList.clear();
         bookingsList.addAll(userBookings);
+
+        // Refresh summary cards
+        refreshSummaryCards();
+
+        // Update booking button state
+        updateBookingButtonState();
     }
 
     private void filterFacilities() {
@@ -276,7 +380,7 @@ public class StudentDashboard extends VBox {
 
     private void handleBooking() {
         if (selectedFacility == null) {
-            showAlert("Please select a facility to book.");
+            showToast("❌ Please select a facility to book.", "error");
             return;
         }
 
@@ -286,21 +390,35 @@ public class StudentDashboard extends VBox {
         String endTimeStr = endTimeCombo.getValue();
 
         if (startDate == null || endDate == null || startTimeStr == null || endTimeStr == null) {
-            showAlert("Please select both start and end date/time.");
+            showToast("❌ Please select both start and end date/time.", "error");
             return;
         }
 
         LocalDateTime startTime = LocalDateTime.of(startDate, LocalTime.parse(startTimeStr));
         LocalDateTime endTime = LocalDateTime.of(endDate, LocalTime.parse(endTimeStr));
 
+        // Auto-fix: if end time is before start time, assume next day
+        if (endTime.isBefore(startTime) || endTime.equals(startTime)) {
+            endTime = endTime.plusDays(1);
+            endDatePicker.setValue(endTime.toLocalDate());
+            endTimeCombo.setValue(endTime.toLocalTime().toString());
+            showToast("ℹ️ End time adjusted to next day.", "info");
+        }
+
+        // Validate booking duration (max 3 hours for discussion rooms, etc.)
+        long hours = java.time.Duration.between(startTime, endTime).toHours();
+        if (hours > 3) {
+            showToast("❌ Bookings cannot exceed 3 hours.", "error");
+            return;
+        }
+
         Booking booking = BookingService.createBooking(currentUser, selectedFacility, startTime, endTime);
 
         if (booking != null) {
-            statusLabel.setText("Booking successful! Booking ID: " + booking.getBookingID());
-            statusLabel.setTextFill(Color.GREEN);
+            showToast("✅ Booking successful! ID: " + booking.getBookingID(), "success");
             loadData(); // Refresh data
         } else {
-            showAlert("Booking failed. Please check the facility availability and your eligibility.");
+            showToast("❌ Booking failed. Check availability and eligibility.", "error");
         }
     }
 
@@ -313,12 +431,30 @@ public class StudentDashboard extends VBox {
 
         boolean success = BookingService.cancelBooking(currentUser, selectedBooking);
         if (success) {
-            statusLabel.setText("Booking cancelled successfully.");
-            statusLabel.setTextFill(Color.ORANGE);
+            showToast("✅ Booking cancelled successfully.", "success");
             loadData(); // Refresh data
         } else {
-            showAlert("Cancellation failed. You can only cancel your own active bookings.");
+            showToast("❌ Cancellation failed. Check booking ownership.", "error");
         }
+    }
+
+    private void showToast(String message, String type) {
+        statusLabel.setText(message);
+        statusLabel.getStyleClass().removeAll("status-success", "status-error", "status-info");
+
+        switch (type) {
+            case "success" -> statusLabel.getStyleClass().add("status-success");
+            case "error" -> statusLabel.getStyleClass().add("status-error");
+            case "info" -> statusLabel.getStyleClass().add("status-info");
+        }
+
+        // Auto-hide toast after 3 seconds
+        javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(3));
+        pause.setOnFinished(e -> {
+            statusLabel.setText("Welcome, " + currentUser.getName() + "!");
+            statusLabel.getStyleClass().removeAll("status-success", "status-error", "status-info");
+        });
+        pause.play();
     }
 
     private void showAlert(String message) {

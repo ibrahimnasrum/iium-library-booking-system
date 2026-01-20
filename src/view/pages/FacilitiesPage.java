@@ -1,0 +1,228 @@
+package view.pages;
+
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.*;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import model.Facility;
+import model.User;
+import model.services.FacilityService;
+import view.components.FacilityCard;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class FacilitiesPage extends VBox {
+
+    private User currentUser;
+    private ObservableList<Facility> facilitiesList;
+    private ObservableList<Facility> filteredFacilitiesList;
+
+    // UI Components
+    private ScrollPane facilitiesScrollPane;
+    private FlowPane facilitiesContainer;
+    private TextField searchField;
+    private ComboBox<String> filterTypeCombo;
+    private ComboBox<String> filterLocationCombo;
+    private ComboBox<String> filterStatusCombo;
+    private TextArea facilityDetailsArea;
+    private Facility selectedFacility;
+
+    public FacilitiesPage(User user) {
+        this.currentUser = user;
+        initializeComponents();
+        setupLayout();
+        loadData();
+    }
+
+    private void initializeComponents() {
+        // Initialize data lists
+        facilitiesList = FXCollections.observableArrayList();
+        filteredFacilitiesList = FXCollections.observableArrayList();
+
+        // Search and filter components
+        searchField = new TextField();
+        searchField.setPromptText("🔍 Search facilities...");
+        searchField.setPrefWidth(300);
+        searchField.setStyle("-fx-font-size: 14px; -fx-padding: 8;");
+        searchField.textProperty().addListener((obs, oldText, newText) -> filterFacilities());
+
+        filterTypeCombo = new ComboBox<>();
+        filterTypeCombo.getItems().addAll("All Types", "Room", "Study Area", "Computer Lab", "Auditorium", "Discussion Room");
+        filterTypeCombo.setValue("All Types");
+        filterTypeCombo.setStyle("-fx-font-size: 14px;");
+        filterTypeCombo.setOnAction(e -> filterFacilities());
+
+        filterLocationCombo = new ComboBox<>();
+        filterLocationCombo.getItems().addAll("All Locations", "Level 1", "Level 2", "Level 3");
+        filterLocationCombo.setValue("All Locations");
+        filterLocationCombo.setStyle("-fx-font-size: 14px;");
+        filterLocationCombo.setOnAction(e -> filterFacilities());
+
+        filterStatusCombo = new ComboBox<>();
+        filterStatusCombo.getItems().addAll("All Status", "Available", "Booked");
+        filterStatusCombo.setValue("All Status");
+        filterStatusCombo.setStyle("-fx-font-size: 14px;");
+        filterStatusCombo.setOnAction(e -> filterFacilities());
+
+        // Facility details area
+        facilityDetailsArea = new TextArea();
+        facilityDetailsArea.setEditable(false);
+        facilityDetailsArea.setPrefRowCount(8);
+        facilityDetailsArea.setStyle("-fx-font-size: 14px; -fx-background-color: #f8f9fa; -fx-border-color: #dee2e6; -fx-border-radius: 5;");
+    }
+
+    private void setupLayout() {
+        setSpacing(20);
+        setPadding(new Insets(30));
+        setStyle("-fx-background-color: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);");
+
+        // Header
+        VBox headerBox = createHeader();
+
+        // Search and filter section
+        VBox searchSection = createSearchSection();
+
+        // Facilities display section
+        VBox facilitiesSection = createFacilitiesSection();
+
+        // Facility details section
+        VBox detailsSection = createDetailsSection();
+
+        getChildren().addAll(headerBox, searchSection, facilitiesSection, detailsSection);
+    }
+
+    private VBox createHeader() {
+        VBox header = new VBox(10);
+        header.setAlignment(Pos.CENTER);
+        header.setPadding(new Insets(0, 0, 20, 0));
+
+        Label titleLabel = new Label("🏢 Browse Facilities");
+        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 28));
+        titleLabel.setStyle("-fx-text-fill: #2c3e50;");
+
+        Label subtitleLabel = new Label("Find and explore available facilities for booking");
+        subtitleLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
+        subtitleLabel.setStyle("-fx-text-fill: #7f8c8d;");
+
+        header.getChildren().addAll(titleLabel, subtitleLabel);
+        return header;
+    }
+
+    private VBox createSearchSection() {
+        VBox searchBox = new VBox(15);
+        searchBox.setPadding(new Insets(20));
+        searchBox.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0.1, 0, 3);");
+
+        Label searchTitle = new Label("🔍 Search & Filter");
+        searchTitle.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        searchTitle.setStyle("-fx-text-fill: #2c3e50;");
+
+        HBox searchRow = new HBox(15);
+        searchRow.setAlignment(Pos.CENTER_LEFT);
+        searchRow.getChildren().addAll(
+            new Label("Search:"), searchField
+        );
+
+        HBox filterRow = new HBox(15);
+        filterRow.setAlignment(Pos.CENTER_LEFT);
+        filterRow.getChildren().addAll(
+            new Label("Type:"), filterTypeCombo,
+            new Label("Location:"), filterLocationCombo,
+            new Label("Status:"), filterStatusCombo
+        );
+
+        searchBox.getChildren().addAll(searchTitle, searchRow, filterRow);
+        return searchBox;
+    }
+
+    private VBox createFacilitiesSection() {
+        VBox facilitiesBox = new VBox(15);
+
+        Label facilitiesTitle = new Label("📋 Available Facilities");
+        facilitiesTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        facilitiesTitle.setStyle("-fx-text-fill: #2c3e50;");
+
+        // Facilities container
+        facilitiesContainer = new FlowPane();
+        facilitiesContainer.setHgap(25);
+        facilitiesContainer.setVgap(25);
+        facilitiesContainer.setPadding(new Insets(20));
+        facilitiesContainer.setStyle("-fx-background-color: white; -fx-background-radius: 12;");
+
+        facilitiesScrollPane = new ScrollPane(facilitiesContainer);
+        facilitiesScrollPane.setFitToWidth(true);
+        facilitiesScrollPane.setPrefHeight(500);
+        facilitiesScrollPane.setStyle("-fx-background-color: transparent; -fx-border-color: #dee2e6; -fx-border-radius: 12; -fx-background-radius: 12;");
+
+        facilitiesBox.getChildren().addAll(facilitiesTitle, facilitiesScrollPane);
+        return facilitiesBox;
+    }
+
+    private VBox createDetailsSection() {
+        VBox detailsBox = new VBox(15);
+        detailsBox.setPadding(new Insets(20));
+        detailsBox.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0.1, 0, 3);");
+
+        Label detailsTitle = new Label("📄 Facility Details");
+        detailsTitle.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        detailsTitle.setStyle("-fx-text-fill: #2c3e50;");
+
+        detailsBox.getChildren().addAll(detailsTitle, facilityDetailsArea);
+        return detailsBox;
+    }
+
+    private void updateFacilitiesDisplay() {
+        facilitiesContainer.getChildren().clear();
+
+        for (Facility facility : filteredFacilitiesList) {
+            FacilityCard card = new FacilityCard(facility);
+
+            // Make card clickable
+            card.setOnMouseClicked(e -> {
+                selectedFacility = facility;
+                facilityDetailsArea.setText(facility.getDetailedInfo());
+                // Highlight selected card
+                for (var child : facilitiesContainer.getChildren()) {
+                    child.setStyle("-fx-background-color: white; -fx-border-color: #ddd; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8;");
+                }
+                card.setStyle("-fx-background-color: #e3f2fd; -fx-border-color: #2196f3; -fx-border-width: 3; -fx-border-radius: 8; -fx-background-radius: 8;");
+            });
+
+            facilitiesContainer.getChildren().add(card);
+        }
+    }
+
+    private void loadData() {
+        // Load facilities
+        List<Facility> facilities = FacilityService.getAllFacilities();
+        facilitiesList.clear();
+        facilitiesList.addAll(facilities);
+        filterFacilities();
+    }
+
+    private void filterFacilities() {
+        List<Facility> filtered = facilitiesList.stream()
+            .filter(f -> searchField.getText().isEmpty() ||
+                        f.getName().toLowerCase().contains(searchField.getText().toLowerCase()) ||
+                        f.getId().toLowerCase().contains(searchField.getText().toLowerCase()))
+            .filter(f -> filterTypeCombo.getValue().equals("All Types") ||
+                        f.getType().toString().contains(filterTypeCombo.getValue()))
+            .filter(f -> filterLocationCombo.getValue().equals("All Locations") ||
+                        f.getLocation().contains(filterLocationCombo.getValue()))
+            .filter(f -> filterStatusCombo.getValue().equals("All Status") ||
+                        f.getStatus().toString().equalsIgnoreCase(filterStatusCombo.getValue()))
+            .collect(Collectors.toList());
+
+        filteredFacilitiesList.clear();
+        filteredFacilitiesList.addAll(filtered);
+        updateFacilitiesDisplay();
+    }
+}

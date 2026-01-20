@@ -9,6 +9,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 import model.Facility;
 import model.enums.FacilityStatus;
+import model.enums.ReservationPrivilege;
 
 public class FacilityCard extends VBox {
 
@@ -22,7 +23,7 @@ public class FacilityCard extends VBox {
 
     private void setupCard() {
         setPrefSize(200, 250);
-        setStyle("-fx-background-color: white; -fx-border-color: #ddd; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;");
+        getStyleClass().add("card");
         setSpacing(10);
         setPadding(new Insets(15));
         setAlignment(Pos.TOP_CENTER);
@@ -62,9 +63,16 @@ public class FacilityCard extends VBox {
 
         // Status badge
         Label statusLabel = new Label(facility.getStatus().toString());
-        String statusColor = getStatusColor(facility.getStatus());
-        statusLabel.setStyle("-fx-background-color: " + statusColor + "; -fx-text-fill: white; " +
-                           "-fx-padding: 2 8 2 8; -fx-background-radius: 10; -fx-font-size: 11px;");
+        statusLabel.getStyleClass().add(getStatusBadgeClass(facility.getStatus()));
+
+        // Privilege badge
+        Label privilegeLabel = new Label(getPrivilegeDisplayText(facility.getPrivilege()));
+        privilegeLabel.getStyleClass().add(getPrivilegeBadgeClass(facility.getPrivilege()));
+
+        // Badges container
+        HBox badgesContainer = new HBox(8);
+        badgesContainer.getChildren().addAll(statusLabel, privilegeLabel);
+        badgesContainer.setAlignment(Pos.CENTER);
 
         // Capacity and location
         Label capacityLabel = new Label("Capacity: " + facility.getCapacity());
@@ -83,10 +91,10 @@ public class FacilityCard extends VBox {
         });
 
         // Hover effects
-        setOnMouseEntered(e -> setStyle("-fx-background-color: #f8f9fa; -fx-border-color: #3498db; -fx-border-width: 2; -fx-border-radius: 5; -fx-background-radius: 5;"));
-        setOnMouseExited(e -> setStyle("-fx-background-color: white; -fx-border-color: #ddd; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;"));
+        setOnMouseEntered(e -> getStyleClass().add("card-hover"));
+        setOnMouseExited(e -> getStyleClass().remove("card-hover"));
 
-        getChildren().addAll(imageView, nameLabel, idLabel, statusLabel, capacityLabel, locationLabel);
+        getChildren().addAll(imageView, nameLabel, idLabel, badgesContainer, capacityLabel, locationLabel);
     }
 
     private String getStatusColor(FacilityStatus status) {
@@ -97,6 +105,43 @@ public class FacilityCard extends VBox {
             case TEMPORARILY_CLOSED: return "#95a5a6"; // Gray
             case RESERVED: return "#9b59b6"; // Purple
             default: return "#95a5a6"; // Gray
+        }
+    }
+
+    private String getStatusBadgeClass(FacilityStatus status) {
+        switch (status) {
+            case AVAILABLE: return "badge-available";
+            case BOOKED: return "badge-booked";
+            case TEMPORARILY_CLOSED: return "badge-closed";
+            case MAINTENANCE: return "badge-maint";
+            case RESERVED: return "badge-available"; // Use available for reserved
+            default: return "badge-closed";
+        }
+    }
+
+    private String getPrivilegeBadgeClass(ReservationPrivilege privilege) {
+        switch (privilege) {
+            case OPEN: return "badge-open";
+            case STUDENT_ONLY: return "badge-open"; // Use open color for students
+            case STAFF_ONLY: return "badge-staff";
+            case POSTGRADUATE_ONLY: return "badge-postgrad";
+            case BOOK_VENDORS_ONLY: return "badge-vendor";
+            case LIBRARY_USE_ONLY: return "badge-staff"; // Use staff color for library use
+            case SPECIAL_NEEDS_ONLY: return "badge-open"; // Use open color for special needs
+            default: return "badge-open";
+        }
+    }
+
+    private String getPrivilegeDisplayText(ReservationPrivilege privilege) {
+        switch (privilege) {
+            case OPEN: return "OPEN";
+            case STUDENT_ONLY: return "STUDENT";
+            case STAFF_ONLY: return "STAFF";
+            case POSTGRADUATE_ONLY: return "POSTGRAD";
+            case BOOK_VENDORS_ONLY: return "VENDOR";
+            case LIBRARY_USE_ONLY: return "LIBRARY";
+            case SPECIAL_NEEDS_ONLY: return "SPECIAL";
+            default: return "OPEN";
         }
     }
 
