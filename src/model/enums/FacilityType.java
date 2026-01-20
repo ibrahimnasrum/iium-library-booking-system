@@ -1,0 +1,15 @@
+package model.enums;
+
+public enum FacilityType {
+    ROOM,
+    STUDY_AREA,
+    COMPUTER_LAB,
+    AUDITORIUM,
+    EXHIBITION_AREA,
+    VIEWING_ROOM,
+    DISCUSSION_ROOM,
+    CARREL_ROOM,
+    RESEARCH_ROOM,
+    MULTI_PURPOSE_ROOM,
+    SPECIAL_NEEDS_ROOM
+}

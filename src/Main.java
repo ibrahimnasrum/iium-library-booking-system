@@ -1,8 +1,8 @@
-import GUI.Login;
+import view.MainApplication;
 
 public class Main {
     public static void main(String[] args) {
-        // Launch the Login application
-        Login.main(args);
+        // Launch the MainApplication
+        MainApplication.main(args);
     }
 }

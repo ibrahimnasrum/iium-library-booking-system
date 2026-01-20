@@ -1,24 +1,25 @@
 package model;
 
+import model.enums.BookingStatus;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class Booking {
     private static int bookingCounter = 1;
     private String bookingID;
-    private String roomID;
-    private String matricNo;
+    private String facilityId;
+    private String userId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private String status; // "Active" or "Cancelled"
+    private BookingStatus status;
 
-    public Booking(String roomID, String matricNo, LocalDateTime startTime, LocalDateTime endTime) {
+    public Booking(String facilityId, String userId, LocalDateTime startTime, LocalDateTime endTime) {
         this.bookingID = "B" + String.format("%03d", bookingCounter++);
-        this.roomID = roomID;
-        this.matricNo = matricNo;
+        this.facilityId = facilityId;
+        this.userId = userId;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.status = "Active";
+        this.status = BookingStatus.ACTIVE;
     }
 
     // Getters and Setters
@@ -26,20 +27,20 @@ public class Booking {
         return bookingID;
     }
 
-    public String getRoomID() {
-        return roomID;
+    public String getFacilityId() {
+        return facilityId;
     }
 
-    public void setRoomID(String roomID) {
-        this.roomID = roomID;
+    public void setFacilityId(String facilityId) {
+        this.facilityId = facilityId;
     }
 
-    public String getMatricNo() {
-        return matricNo;
+    public String getUserId() {
+        return userId;
     }
 
-    public void setMatricNo(String matricNo) {
-        this.matricNo = matricNo;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public LocalDateTime getStartTime() {
@@ -58,12 +59,41 @@ public class Booking {
         this.endTime = endTime;
     }
 
-    public String getStatus() {
+    public BookingStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(BookingStatus status) {
         this.status = status;
+    }
+
+    // Legacy getters for backward compatibility
+    public String getRoomID() {
+        return getFacilityId();
+    }
+
+    public void setRoomID(String roomID) {
+        setFacilityId(roomID);
+    }
+
+    public String getMatricNo() {
+        return getUserId();
+    }
+
+    public void setMatricNo(String matricNo) {
+        setUserId(matricNo);
+    }
+
+    public String getStatusString() {
+        return status.toString();
+    }
+
+    public void setStatus(String status) {
+        try {
+            this.status = BookingStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            this.status = BookingStatus.ACTIVE; // Default fallback
+        }
     }
 
     public String getFormattedStartTime() {
@@ -78,7 +108,7 @@ public class Booking {
 
     @Override
     public String toString() {
-        return String.format("Booking %s | Room: %s | %s to %s | Status: %s", 
-            bookingID, roomID, getFormattedStartTime(), getFormattedEndTime(), status);
+        return String.format("Booking %s | Facility: %s | %s to %s | Status: %s",
+            bookingID, facilityId, getFormattedStartTime(), getFormattedEndTime(), status);
     }
 }
