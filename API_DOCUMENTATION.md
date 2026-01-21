@@ -4,6 +4,8 @@
 
 This document provides detailed API documentation for the IIUM Library Booking System, including all public classes, methods, and their usage.
 
+> **Note (recent updates):** The application now starts with a **Login** screen (no auto-login). Closed and Maintenance facility statuses are preserved and displayed. A project UML diagram is available at `uml/full_project_diagram.puml` (rendered image: `uml/full_project_diagram.png`). See `CHANGELOG.md` for the full list of recent changes.
+
 ## Table of Contents
 
 - [Model Classes](#model-classes)

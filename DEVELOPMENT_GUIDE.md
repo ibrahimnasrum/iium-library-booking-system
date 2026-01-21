@@ -116,6 +116,20 @@ src/
 javac --module-path "javafx-sdk-21.0.9\lib" --add-modules javafx.controls,javafx.fxml -d bin src\Main.java src\model\enums\*.java src\model\*.java src\model\services\*.java src\view\components\*.java src\view\pages\*.java src\view\*.java
 
 java --module-path "javafx-sdk-21.0.9\lib" --add-modules javafx.controls,javafx.fxml -cp bin view.MainApplication
+
+### UML Diagrams & Rendering
+
+We maintain a project-level UML file at `uml/full_project_diagram.puml`. The rendered PNG is available at `uml/full_project_diagram.png`.
+
+To render locally:
+1. Download `plantuml.jar` (https://plantuml.com/download) and place it in the repo root or set the `PLANTUML_JAR` environment variable to the jar path.
+2. Install Graphviz (dot) and ensure `dot` is on your PATH.
+3. Use the helper script `tools\render-uml.bat` from the `tools` folder, or run:
+   ```bash
+   java -jar plantuml.jar -tpng uml/full_project_diagram.puml
+   ```
+
+Alternatively, use the PlantUML VS Code extension to preview `.puml` files (requires Graphviz).
 ```
 
 ## Coding Standards
