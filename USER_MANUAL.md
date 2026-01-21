@@ -41,8 +41,8 @@ This user manual will guide you through all the features and functionality of th
    ```
 
 3. **First Time Setup**
-   - The application auto-logs in with a test account
-   - Use the user switching feature to test different roles
+   - The application opens with a **Login screen** for proper authentication. Use your IIUM matric number to sign in.
+   - Use the quick login buttons or the user switching feature to test different roles (Admin/Staff/Student/Postgrad).
 
 ## User Roles and Permissions
 

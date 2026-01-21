@@ -40,6 +40,16 @@ The application starts with a **login screen** for proper authentication.
 3. **Book It** → Click a facility card → Select date/time → Click "Book"
 4. **Success!** → You'll see a confirmation message
 
+### Project Diagrams & Documentation
+- The project UML diagram is available in `uml/full_project_diagram.puml` and the rendered `uml/full_project_diagram.png`.
+- To render locally, follow `uml/README.md` or use `tools/render-uml.bat` after placing `plantuml.jar` in the repo root.
+
+### Recent Fixes (summary)
+- Proper Login screen added (replaces auto-login). ✅
+- Closed and Maintenance facility statuses preserved and displayed. ✅
+- Filter behavior and facility card refresh fixed. ✅
+- Added debug logs to help troubleshoot facility loading and filtering. ✅
+
 ## 🧪 Test Scenarios
 
 ### ✅ Working Features
