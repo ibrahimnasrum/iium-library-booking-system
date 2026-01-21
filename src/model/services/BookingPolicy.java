@@ -18,35 +18,53 @@ public class BookingPolicy {
      * Check if a user can book a facility
      */
     public static boolean canBook(User user, Facility facility, LocalDateTime startTime, LocalDateTime endTime) {
+        System.out.println("BookingPolicy.canBook called for user " + user.getMatricNo() + " (" + user.getRole() + ") " +
+                         "facility " + facility.getId() + " at " + startTime + " - " + endTime);
+
         if (user == null || facility == null || startTime == null || endTime == null) {
+            System.out.println("BookingPolicy: Null parameter check failed");
             return false;
         }
 
         // Check if facility is available
         if (!facility.isAvailable()) {
+            System.out.println("BookingPolicy: Facility not available - status: " + facility.getStatus());
             return false;
         }
+        System.out.println("BookingPolicy: ✓ Facility is available");
 
         // Check privilege requirements
         if (!hasRequiredPrivilege(user, facility)) {
+            System.out.println("BookingPolicy: Privilege check failed - user: " + user.getRole() +
+                             ", required: " + facility.getPrivilege());
             return false;
         }
+        System.out.println("BookingPolicy: ✓ Privilege check passed");
 
         // Check booking duration
         if (!isValidDuration(startTime, endTime)) {
+            System.out.println("BookingPolicy: Duration check failed");
             return false;
         }
+        System.out.println("BookingPolicy: ✓ Duration check passed");
 
-        // Check booking time is in the future
-        if (startTime.isBefore(LocalDateTime.now())) {
+        // Check booking time is at least 30 minutes in the future
+        LocalDateTime minimumBookingTime = LocalDateTime.now().plusMinutes(30);
+        if (startTime.isBefore(minimumBookingTime)) {
+            System.out.println("BookingPolicy: Time check failed - start time " + startTime +
+                             " is before minimum " + minimumBookingTime);
             return false;
         }
+        System.out.println("BookingPolicy: ✓ Time check passed");
 
         // Check business hours (assuming 8 AM to 10 PM)
         if (!isWithinBusinessHours(startTime, endTime)) {
+            System.out.println("BookingPolicy: Business hours check failed");
             return false;
         }
+        System.out.println("BookingPolicy: ✓ Business hours check passed");
 
+        System.out.println("BookingPolicy: All checks passed");
         return true;
     }
 
@@ -67,8 +85,8 @@ public class BookingPolicy {
                 return user.getRole() == Role.STAFF || user.getRole() == Role.ADMIN;
 
             case POSTGRADUATE_ONLY:
-                // For demo, assume postgraduate students have matric numbers starting with certain patterns
-                return user.getMatricNo().startsWith("9") || user.getMatricNo().startsWith("8");
+                // Postgraduate students have matric numbers starting with "3" (IIUM system)
+                return user.getMatricNo().startsWith("3");
 
             case SPECIAL_NEEDS_ONLY:
                 // Would need additional user profile information

@@ -3,13 +3,15 @@ package view;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import model.User;
+import model.services.AuthService;
 import view.pages.*;
 
 public class MainLayout extends BorderPane {
@@ -51,7 +53,7 @@ public class MainLayout extends BorderPane {
 
         // Only create admin panel if user is admin
         if (currentUser.getRole().toString().equals("ADMIN")) {
-            adminPanelPage = new AdminPanelPage(currentUser);
+            adminPanelPage = new AdminPanelPage(currentUser, this::refreshAllFacilityDisplays);
         }
     }
 
@@ -168,7 +170,8 @@ public class MainLayout extends BorderPane {
         VBox userBox = new VBox(5);
         userBox.setAlignment(Pos.CENTER);
         userBox.setPadding(new javafx.geometry.Insets(20, 0, 20, 0));
-        userBox.setStyle("-fx-background-color: rgba(255,255,255,0.1); -fx-background-radius: 10; -fx-padding: 15;");
+        userBox.setStyle("-fx-background-color: rgba(255,255,255,0.1); -fx-background-radius: 10; -fx-padding: 15; " +
+                        "-fx-cursor: hand;");
 
         Label userLabel = new Label("👤 " + currentUser.getName());
         userLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
@@ -178,7 +181,18 @@ public class MainLayout extends BorderPane {
         roleLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 12));
         roleLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.7);");
 
-        userBox.getChildren().addAll(userLabel, roleLabel);
+        Label matricLabel = new Label("ID: " + currentUser.getMatricNo());
+        matricLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
+        matricLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.6);");
+
+        Label clickHint = new Label("Click to switch user");
+        clickHint.setFont(Font.font("Arial", FontWeight.NORMAL, 9));
+        clickHint.setStyle("-fx-text-fill: rgba(255,255,255,0.5);");
+
+        // Make the entire user box clickable
+        userBox.setOnMouseClicked(e -> showLoginDialog());
+
+        userBox.getChildren().addAll(userLabel, roleLabel, matricLabel, clickHint);
         return userBox;
     }
 
@@ -249,6 +263,24 @@ public class MainLayout extends BorderPane {
         }
     }
 
+    public void refreshAllFacilityDisplays() {
+        // Refresh facilities page
+        if (facilitiesPage != null) {
+            facilitiesPage.refreshFacilityStatuses();
+        }
+
+        // Refresh facility detail page if it's currently showing
+        if (facilityDetailPage != null) {
+            facilityDetailPage.refreshFacility();
+        }
+
+        // Refresh dashboard if it displays facilities
+        if (dashboardPage != null && dashboardPage instanceof DashboardPage) {
+            // DashboardPage might need refresh if it shows facility stats
+            // For now, we'll implement this if needed
+        }
+    }
+
     private void resetButtonStyles() {
         dashboardBtn.getStyleClass().remove("active");
         facilitiesBtn.getStyleClass().remove("active");
@@ -281,6 +313,105 @@ public class MainLayout extends BorderPane {
         button.setStyle("-fx-background-color: rgba(255,255,255,0.2); -fx-text-fill: white; " +
                       "-fx-font-size: 14px; -fx-padding: 12 20; -fx-background-radius: 8; " +
                       "-fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(255,255,255,0.3), 5, 0.3, 0, 0);");
+    }
+
+    private void showLoginDialog() {
+        Dialog<User> dialog = new Dialog<>();
+        dialog.setTitle("Switch User");
+        dialog.setHeaderText("Login with different credentials to switch user");
+
+        // Set the button types
+        ButtonType loginButtonType = new ButtonType("Login", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
+
+        // Create the matric number and password labels and fields
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField matricField = new TextField();
+        matricField.setPromptText("Matric Number (e.g., 0123456)");
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Password");
+
+        // Pre-fill with current user's matric number for convenience
+        matricField.setText(currentUser.getMatricNo());
+
+        grid.add(new Label("Matric Number:"), 0, 0);
+        grid.add(matricField, 1, 0);
+        grid.add(new Label("Password:"), 0, 1);
+        grid.add(passwordField, 1, 1);
+
+        // Add some quick login options
+        Label quickLoginLabel = new Label("Quick Login Options:");
+        quickLoginLabel.setStyle("-fx-font-weight: bold; -fx-padding: 10 0 5 0;");
+        grid.add(quickLoginLabel, 0, 2, 2, 1);
+
+        HBox quickButtons = new HBox(5);
+        Button adminBtn = new Button("Admin (0...)");
+        Button staffBtn = new Button("Staff (1...)");
+        Button studentBtn = new Button("Student (2...)");
+        Button postgradBtn = new Button("Postgrad (3...)");
+
+        adminBtn.setOnAction(e -> matricField.setText("0123456"));
+        staffBtn.setOnAction(e -> matricField.setText("1123456"));
+        studentBtn.setOnAction(e -> matricField.setText("2123456"));
+        postgradBtn.setOnAction(e -> matricField.setText("3123456"));
+
+        quickButtons.getChildren().addAll(adminBtn, staffBtn, studentBtn, postgradBtn);
+        grid.add(quickButtons, 0, 3, 2, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        // Request focus on the matric field by default
+        matricField.requestFocus();
+
+        // Convert the result to a User when the login button is clicked
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == loginButtonType) {
+                String matric = matricField.getText();
+                String password = passwordField.getText();
+                return AuthService.login(matric, password);
+            }
+            return null;
+        });
+
+        // Show the dialog and handle the result
+        dialog.showAndWait().ifPresent(newUser -> {
+            if (newUser != null) {
+                switchUser(newUser);
+            }
+        });
+    }
+
+    private void switchUser(User newUser) {
+        this.currentUser = newUser;
+
+        // Reinitialize pages with new user
+        dashboardPage = new DashboardPage(currentUser, this::showPage);
+        facilitiesPage = new FacilitiesPage(currentUser, this::navigateToFacilityDetail);
+        bookingPage = new BookingPage(currentUser, this::refreshFacilitiesPage);
+        myBookingsPage = new MyBookingsPage(currentUser);
+        facilityDetailPage = new FacilityDetailPage(currentUser, this::showPage);
+
+        // Recreate admin panel if user is admin
+        if (currentUser.getRole().toString().equals("ADMIN")) {
+            adminPanelPage = new AdminPanelPage(currentUser, this::refreshAllFacilityDisplays);
+        } else {
+            adminPanelPage = null;
+        }
+
+        // Update sidebar to reflect new user
+        updateSidebar();
+
+        // Show dashboard by default
+        showPage("dashboard");
+    }
+
+    private void updateSidebar() {
+        VBox sidebar = createSidebar();
+        setLeft(sidebar);
     }
 
     private void handleLogout() {

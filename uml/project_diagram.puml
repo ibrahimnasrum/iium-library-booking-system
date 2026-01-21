@@ -1,0 +1,62 @@
+@startuml
+' IIUM Library Booking System - Core UML
+
+' Classes
+class User {
+  - matricNo: String
+  - role: Role
+  + canBook(f: Facility): boolean
+}
+
+abstract class Facility {
+  - id: String
+  - name: String
+  - status: FacilityStatus
+  - privilege: ReservationPrivilege
+  + isAvailable(): boolean
+}
+
+class Room
+Room --|> Facility
+
+class Booking {
+  - id: String
+  - facilityId: String
+  - userId: String
+  - start: LocalDateTime
+  - end: LocalDateTime
+  - status: BookingStatus
+}
+
+class AuthService {
+  + login(matric: String, pwd: String): User
+}
+
+class BookingService {
+  + createBooking(...): Booking
+  + getUserBookings(userId: String): List<Booking>
+}
+
+class FacilityService {
+  + getAllFacilities(): List<Facility>
+  + findFacilityById(id: String): Facility
+}
+
+' UI / View classes (simplified)
+class MainApplication
+class MainLayout
+class LoginPage
+class FacilitiesPage
+class FacilityCard
+
+' Relationships
+User "1" -- "0..*" Booking : owns
+Facility "1" -- "0..*" Booking : "reserved in"
+User --> AuthService : uses
+BookingService --> FacilityService : uses
+MainLayout --> FacilitiesPage : contains
+FacilitiesPage *-- FacilityCard : renders
+LoginPage --> AuthService : uses
+MainApplication --> MainLayout : creates
+
+@enduml

@@ -7,6 +7,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
 import model.Facility;
 import model.enums.FacilityStatus;
 import model.enums.ReservationPrivilege;
@@ -23,7 +24,7 @@ public class FacilityCard extends VBox {
     }
 
     private void setupCard() {
-        setPrefSize(180, 140); // Increased height from 120 to 140 to accommodate status
+        setPrefSize(220, 140); // Increased width from 200 to 220 to accommodate longer names
         setAlignment(Pos.CENTER); // Center the content in the StackPane
 
         // Create content VBox
@@ -31,7 +32,7 @@ public class FacilityCard extends VBox {
         contentBox.setSpacing(4);
         contentBox.setPadding(new Insets(10)); // Reduced padding from 15 to 10
         contentBox.setAlignment(Pos.TOP_CENTER);
-        contentBox.setPrefSize(180, 140); // Make sure it fills the entire card
+        contentBox.setPrefSize(220, 140); // Make sure it fills the entire card
 
         // Add colorful background based on facility type with very thin black outline and enhanced shadow
         String backgroundColor = getFacilityTypeColor(facility.getType());
@@ -46,20 +47,29 @@ public class FacilityCard extends VBox {
         Label nameLabel = new Label(facility.getName());
         nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #000000; -fx-text-alignment: center;");
         nameLabel.setWrapText(true);
-        nameLabel.setMaxWidth(150);
+        nameLabel.setMaxWidth(190);
 
-        // Facility type (smaller, dark gray text)
-        Label typeLabel = new Label(facility.getType().toString().replace("_", " "));
-        typeLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #000000; -fx-text-alignment: center; -fx-font-style: italic; -fx-font-weight: bold;");
-        typeLabel.setWrapText(true);
-        typeLabel.setMaxWidth(150);
+        // Level/Floor information (extracted from location)
+        String levelInfo = getLevelInfo(facility.getLocation());
+        Label levelLabel = new Label(levelInfo);
+        levelLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #666666; -fx-text-alignment: center; -fx-font-weight: normal;");
+        levelLabel.setWrapText(true);
+        levelLabel.setMaxWidth(190);
+        levelLabel.setVisible(!levelInfo.isEmpty()); // Hide if no level info
+        levelLabel.setManaged(!levelInfo.isEmpty()); // Remove from layout if no level info
 
-        // Status badge - positioned at bottom center
+        // Status badge - positioned at bottom center with left offset and enhanced glow
         Label statusLabel = new Label(getStatusDisplayText(facility.getStatus()));
         statusLabel.getStyleClass().add(getStatusBadgeClass(facility.getStatus()));
-        statusLabel.setStyle(statusLabel.getStyle() + "; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0.5, 0, 1);");
+        String glowColor = getStatusGlowColor(facility.getStatus());
+        statusLabel.setStyle(statusLabel.getStyle() + "; -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 8 16; -fx-background-radius: 25; -fx-effect: dropshadow(gaussian, " + glowColor + ", 25, 0.9, 0, 0), dropshadow(gaussian, rgba(255,255,255,0.8), 15, 0.6, 0, 0), dropshadow(gaussian, rgba(0,0,0,0.8), 8, 0.8, 0, 4), innershadow(gaussian, rgba(255,255,255,0.8), 6, 0, 0, 2), innershadow(gaussian, " + glowColor + ", 3, 0, 0, 1); -fx-translate-x: -6;");
 
-        contentBox.getChildren().addAll(iconLabel, nameLabel, typeLabel, statusLabel);
+        // Create a container for the status to allow precise positioning
+        HBox statusContainer = new HBox();
+        statusContainer.setAlignment(Pos.CENTER);
+        statusContainer.getChildren().add(statusLabel);
+
+        contentBox.getChildren().addAll(iconLabel, nameLabel, levelLabel, statusContainer);
 
         // Add the content box to the VBox
         getChildren().add(contentBox);
@@ -74,14 +84,14 @@ public class FacilityCard extends VBox {
         setOnMouseExited(e -> contentBox.setStyle("-fx-background-color: " + backgroundColor + "; -fx-background-radius: 15; -fx-border-color: #000000; -fx-border-width: 0.5; -fx-border-radius: 15; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 12, 0.4, 0, 6);"));
     }
 
-    private String getStatusColor(FacilityStatus status) {
+    private String getStatusGlowColor(FacilityStatus status) {
         switch (status) {
-            case AVAILABLE: return "#27ae60"; // Green
-            case BOOKED: return "#e74c3c"; // Red
-            case MAINTENANCE: return "#f39c12"; // Orange
-            case TEMPORARILY_CLOSED: return "#95a5a6"; // Gray
-            case RESERVED: return "#9b59b6"; // Purple
-            default: return "#95a5a6"; // Gray
+            case AVAILABLE: return "#27ae60"; // Green glow
+            case BOOKED: return "#e74c3c"; // Red glow
+            case MAINTENANCE: return "#3498db"; // Blue glow
+            case TEMPORARILY_CLOSED: return "#f1c40f"; // Yellow glow
+            case RESERVED: return "#9b59b6"; // Purple glow
+            default: return "#95a5a6"; // Gray glow
         }
     }
 
@@ -126,16 +136,20 @@ public class FacilityCard extends VBox {
 
     public void updateStatus(model.enums.FacilityStatus newStatus) {
         facility.setStatus(newStatus);
-        // Find and update the status label (it's the last child in contentBox)
+        // Find and update the status label (it's inside the statusContainer which is the last child of contentBox)
         if (contentBox.getChildren().size() > 0) {
             javafx.scene.Node lastNode = contentBox.getChildren().get(contentBox.getChildren().size() - 1);
-            if (lastNode instanceof Label) {
-                Label statusLabel = (Label) lastNode;
-                statusLabel.setText(getStatusDisplayText(newStatus));
-                // Clear existing style classes and add the new one
-                statusLabel.getStyleClass().clear();
-                statusLabel.getStyleClass().add(getStatusBadgeClass(newStatus));
-                statusLabel.setStyle(statusLabel.getStyle() + "; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0.5, 0, 1);");
+            if (lastNode instanceof HBox) {
+                HBox statusContainer = (HBox) lastNode;
+                if (statusContainer.getChildren().size() > 0 && statusContainer.getChildren().get(0) instanceof Label) {
+                    Label statusLabel = (Label) statusContainer.getChildren().get(0);
+                    statusLabel.setText(getStatusDisplayText(newStatus));
+                    // Clear existing style classes and add the new one
+                    statusLabel.getStyleClass().clear();
+                    statusLabel.getStyleClass().add(getStatusBadgeClass(newStatus));
+                    String glowColor = getStatusGlowColor(newStatus);
+                    statusLabel.setStyle(statusLabel.getStyle() + "; -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 8 16; -fx-background-radius: 25; -fx-effect: dropshadow(gaussian, " + glowColor + ", 25, 0.9, 0, 0), dropshadow(gaussian, rgba(255,255,255,0.8), 15, 0.6, 0, 0), dropshadow(gaussian, rgba(0,0,0,0.8), 8, 0.8, 0, 4), innershadow(gaussian, rgba(255,255,255,0.8), 6, 0, 0, 2), innershadow(gaussian, " + glowColor + ", 3, 0, 0, 1); -fx-translate-x: -6;");
+                }
             }
         }
     }
@@ -159,6 +173,50 @@ public class FacilityCard extends VBox {
             case SPECIAL_NEEDS_ROOM: return "♿";
             default: return "🏢";
         }
+    }
+
+    private String getLevelInfo(String location) {
+        if (location == null || location.trim().isEmpty()) {
+            return "";
+        }
+
+        String lowerLocation = location.toLowerCase();
+
+        // Check for level/floor patterns - return the full location if it contains level/floor
+        if (lowerLocation.contains("level") || lowerLocation.contains("floor")) {
+            return location.trim();
+        }
+
+        // Check for numeric level indicators (like "L1", "1st Floor", etc.)
+        if (lowerLocation.matches(".*\\b[lg](\\d+)\\b.*") ||
+            lowerLocation.matches(".*\\blevel\\s*(\\d+)\\b.*") ||
+            lowerLocation.matches(".*\\bfloor\\s*(\\d+)\\b.*")) {
+            return extractLevelNumber(location);
+        }
+
+        // If no level info found, return empty string (label will be hidden)
+        return "";
+    }
+
+    private String extractLevelNumber(String location) {
+        // Try to extract level number from common patterns
+        String[] patterns = {
+            "(?i)level\\s*(\\d+)",
+            "(?i)floor\\s*(\\d+)",
+            "(?i)[lg](\\d+)",
+            "(?i)(\\d+)(?:st|nd|rd|th)\\s*floor"
+        };
+
+        for (String pattern : patterns) {
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
+            java.util.regex.Matcher m = p.matcher(location);
+            if (m.find()) {
+                String level = m.group(1);
+                return "Level " + level;
+            }
+        }
+
+        return "";
     }
 
     private String getFacilityTypeColor(model.enums.FacilityType type) {

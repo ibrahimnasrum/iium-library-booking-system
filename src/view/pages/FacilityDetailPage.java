@@ -13,7 +13,10 @@ import model.User;
 import model.Equipment;
 import model.services.BookingService;
 import model.services.BookingPolicy;
+import model.services.FacilityService;
 import model.enums.FacilityStatus;
+import model.enums.ReservationPrivilege;
+import model.enums.Role;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -204,6 +207,17 @@ public class FacilityDetailPage extends VBox {
         updateDisplay();
     }
 
+    public void refreshFacility() {
+        if (facility != null) {
+            // Reload facility data from service
+            Facility updatedFacility = FacilityService.findFacilityById(facility.getId());
+            if (updatedFacility != null) {
+                this.facility = updatedFacility;
+                updateDisplay();
+            }
+        }
+    }
+
     private void updateDisplay() {
         if (facility == null) return;
 
@@ -316,16 +330,31 @@ public class FacilityDetailPage extends VBox {
         LocalDateTime startDateTime = LocalDateTime.of(startDateValue, LocalTime.parse(startTimeStr));
         LocalDateTime endDateTime = LocalDateTime.of(endDateValue, LocalTime.parse(endTimeStr));
 
+        System.out.println("Attempting to book facility " + facility.getId() + " for user " + currentUser.getMatricNo());
+        System.out.println("Booking time: " + startDateTime + " to " + endDateTime);
+
+        // Validate booking before attempting
+        String validationError = validateBooking(startDateTime, endDateTime);
+        if (validationError != null) {
+            System.out.println("Booking validation failed: " + validationError);
+            showAlert(validationError);
+            return;
+        }
+
+        System.out.println("Validation passed, creating booking...");
         model.Booking booking = BookingService.createBooking(currentUser, facility, startDateTime, endDateTime);
 
         if (booking != null) {
+            System.out.println("Booking created successfully: " + booking.getBookingID());
             showAlert("Booking successful! Booking ID: " + booking.getBookingID());
-            // Navigate back to facilities or my bookings
+            // Refresh facilities page to show updated status, then navigate to my bookings
             if (navigateCallback != null) {
+                navigateCallback.accept("facilities"); // This will refresh facility statuses
                 navigateCallback.accept("my-bookings");
             }
         } else {
-            showAlert("Booking failed. Please check availability and your eligibility.");
+            System.out.println("Booking creation failed in BookingService.createBooking");
+            showAlert("Booking failed due to a booking conflict. The selected time slot is already booked.");
         }
     }
 
@@ -338,6 +367,81 @@ public class FacilityDetailPage extends VBox {
             case RESERVED: return "#9b59b6"; // Purple
             default: return "#95a5a6"; // Gray
         }
+    }
+
+    private String validateBooking(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        System.out.println("Validating booking for facility " + facility.getId() + " (" + facility.getName() + ")");
+
+        // Check if facility is available
+        if (!facility.isAvailable()) {
+            System.out.println("Validation failed: Facility not available - status: " + facility.getStatus());
+            return "This facility is currently not available for booking. Please check its status.";
+        }
+        System.out.println("✓ Facility is available");
+
+        // Check privilege requirements
+        if (!BookingPolicy.canBook(currentUser, facility, startDateTime, endDateTime)) {
+            // Determine specific reason
+            if (!hasRequiredPrivilege(currentUser, facility)) {
+                System.out.println("Validation failed: Insufficient privileges - user role: " + currentUser.getRole() +
+                                 ", required privilege: " + facility.getPrivilege());
+                return "You do not have the required privilege to book this facility.";
+            }
+            if (!isValidDuration(startDateTime, endDateTime)) {
+                System.out.println("Validation failed: Invalid duration");
+                return "Invalid booking duration. Maximum booking time is " + BookingPolicy.getMaxBookingHours() + " hours.";
+            }
+            // Check if booking is at least 30 minutes in the future
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime minimumBookingTime = now.plusMinutes(30);
+            if (startDateTime.isBefore(minimumBookingTime)) {
+                System.out.println("Validation failed: Booking too soon - start: " + startDateTime +
+                                 ", minimum: " + minimumBookingTime);
+                return "Bookings must be made at least 30 minutes in advance.";
+            }
+            if (!isWithinBusinessHours(startDateTime, endDateTime)) {
+                System.out.println("Validation failed: Outside business hours");
+                return "Booking time must be within business hours: " + BookingPolicy.getBusinessHours();
+            }
+            // Check for booking conflicts
+            if (BookingService.hasBookingConflict(facility.getId(), startDateTime, endDateTime)) {
+                System.out.println("Validation failed: Booking conflict detected");
+                return "The selected time slot conflicts with an existing booking.";
+            }
+        }
+
+        System.out.println("✓ All validations passed");
+        return null; // No validation errors
+    }
+
+    // Helper methods for validation (delegating to BookingPolicy)
+    private boolean hasRequiredPrivilege(User user, Facility facility) {
+        ReservationPrivilege required = facility.getPrivilege();
+        switch (required) {
+            case OPEN: return true;
+            case STUDENT_ONLY: return user.getRole() == Role.STUDENT;
+            case STAFF_ONLY: return user.getRole() == Role.STAFF || user.getRole() == Role.ADMIN;
+            case POSTGRADUATE_ONLY: return user.getMatricNo().startsWith("3");
+            case SPECIAL_NEEDS_ONLY: return false;
+            case BOOK_VENDORS_ONLY: return false;
+            case LIBRARY_USE_ONLY: return user.getRole() == Role.STAFF || user.getRole() == Role.ADMIN;
+            default: return false;
+        }
+    }
+
+    private boolean isValidDuration(LocalDateTime startTime, LocalDateTime endTime) {
+        if (startTime.isAfter(endTime)) return false;
+        long hours = java.time.Duration.between(startTime, endTime).toHours();
+        return hours > 0 && hours <= BookingPolicy.getMaxBookingHours();
+    }
+
+    private boolean isWithinBusinessHours(LocalDateTime startTime, LocalDateTime endTime) {
+        int startHour = startTime.getHour();
+        int endHour = endTime.getHour();
+        final int OPEN_HOUR = 8;
+        final int CLOSE_HOUR = 22;
+        return startHour >= OPEN_HOUR && startHour <= CLOSE_HOUR &&
+               endHour >= OPEN_HOUR && endHour <= CLOSE_HOUR;
     }
 
     private void showAlert(String message) {

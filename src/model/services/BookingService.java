@@ -4,6 +4,7 @@ import model.Booking;
 import model.Facility;
 import model.User;
 import model.enums.BookingStatus;
+import model.enums.FacilityStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
@@ -13,29 +14,91 @@ public class BookingService {
 
     private static List<Booking> allBookings = new ArrayList<>();
 
+    static {
+        // Clean up expired bookings and reset facility statuses on startup
+        cleanupExpiredBookings();
+        System.out.println("BookingService initialized - cleaned up expired bookings");
+    }
+
+    /**
+     * Clean up expired bookings and reset facility statuses
+     */
+    private static void cleanupExpiredBookings() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Booking> expiredBookings = new ArrayList<>();
+        int activeBookingsBefore = getActiveBookingsCount();
+
+        for (Booking booking : allBookings) {
+            if (booking.getStatus() == BookingStatus.ACTIVE && booking.getEndTime().isBefore(now)) {
+                // Booking has expired
+                expiredBookings.add(booking);
+                booking.setStatus(BookingStatus.COMPLETED);
+
+                // Reset facility status to available
+                Facility facility = FacilityService.findFacilityById(booking.getFacilityId());
+                if (facility != null) {
+                    facility.setStatus(FacilityStatus.AVAILABLE);
+                    System.out.println("Reset facility " + facility.getId() + " to AVAILABLE (expired booking)");
+                }
+            }
+        }
+
+        // Also reset any facilities that are BOOKED but have no active bookings
+        List<Facility> allFacilities = FacilityService.getAllFacilities();
+        for (Facility facility : allFacilities) {
+            if (facility.getStatus() == FacilityStatus.BOOKED) {
+                List<Booking> activeBookings = getActiveBookingsForFacility(facility.getId());
+                if (activeBookings.isEmpty()) {
+                    facility.setStatus(FacilityStatus.AVAILABLE);
+                    System.out.println("Reset facility " + facility.getId() + " to AVAILABLE (no active bookings)");
+                }
+            }
+        }
+
+        int activeBookingsAfter = getActiveBookingsCount();
+        System.out.println("Cleanup complete - Active bookings: " + activeBookingsBefore + " -> " + activeBookingsAfter);
+    }
+
+    /**
+     * Initialize and cleanup expired bookings (called after facilities are loaded)
+     */
+    public static void initializeAndCleanup() {
+        cleanupExpiredBookings();
+    }
+
     /**
      * Create a new booking
      */
     public static Booking createBooking(User user, Facility facility, LocalDateTime startTime, LocalDateTime endTime) {
+        System.out.println("BookingService.createBooking called for facility " + facility.getId() +
+                         " by user " + user.getMatricNo());
+
         // Validate booking policy
         if (!BookingPolicy.canBook(user, facility, startTime, endTime)) {
+            System.out.println("BookingPolicy.canBook returned false");
             return null;
         }
+        System.out.println("BookingPolicy.canBook passed");
 
         // Check for conflicts
         if (hasBookingConflict(facility.getId(), startTime, endTime)) {
+            System.out.println("hasBookingConflict returned true");
             return null;
         }
+        System.out.println("No booking conflicts detected");
 
         // Create booking
         Booking booking = new Booking(facility.getId(), user.getMatricNo(), startTime, endTime);
         allBookings.add(booking);
+        System.out.println("Booking created: " + booking.getBookingID());
 
         // Update facility status
         facility.setStatus(model.enums.FacilityStatus.BOOKED);
+        System.out.println("Facility status set to BOOKED");
 
         // Add to user's bookings
         user.getMyBookings().add(booking);
+        System.out.println("Booking added to user's bookings");
 
         return booking;
     }
@@ -103,10 +166,23 @@ public class BookingService {
      * Check for booking conflicts
      */
     public static boolean hasBookingConflict(String facilityId, LocalDateTime startTime, LocalDateTime endTime) {
-        return allBookings.stream()
+        List<Booking> conflictingBookings = allBookings.stream()
                 .filter(b -> b.getFacilityId().equals(facilityId))
                 .filter(b -> b.getStatus() == BookingStatus.ACTIVE)
-                .anyMatch(b -> timeSlotsOverlap(b.getStartTime(), b.getEndTime(), startTime, endTime));
+                .filter(b -> timeSlotsOverlap(b.getStartTime(), b.getEndTime(), startTime, endTime))
+                .collect(Collectors.toList());
+
+        if (!conflictingBookings.isEmpty()) {
+            System.out.println("Booking conflict detected for facility " + facilityId +
+                             " at " + startTime + " - " + endTime +
+                             ". Conflicting bookings: " + conflictingBookings.size());
+            for (Booking b : conflictingBookings) {
+                System.out.println("  - Booking: " + b.getBookingID() + " from " +
+                                 b.getStartTime() + " to " + b.getEndTime());
+            }
+        }
+
+        return !conflictingBookings.isEmpty();
     }
 
     /**
@@ -118,11 +194,36 @@ public class BookingService {
     }
 
     /**
-     * Get bookings by date range
+     * Clear all bookings and reset all facilities to available (for testing)
      */
-    public static List<Booking> getBookingsByDateRange(LocalDateTime start, LocalDateTime end) {
+    public static void clearAllBookingsAndResetFacilities() {
+        allBookings.clear();
+
+        // Reset all facilities to available
+        List<Facility> allFacilities = FacilityService.getAllFacilities();
+        for (Facility facility : allFacilities) {
+            if (facility.getStatus() == FacilityStatus.BOOKED) {
+                facility.setStatus(FacilityStatus.AVAILABLE);
+            }
+        }
+    }
+
+    /**
+     * Get active bookings count for debugging
+     */
+    public static int getActiveBookingsCount() {
+        return (int) allBookings.stream()
+                .filter(b -> b.getStatus() == BookingStatus.ACTIVE)
+                .count();
+    }
+
+    /**
+     * Get active bookings for a facility
+     */
+    public static List<Booking> getActiveBookingsForFacility(String facilityId) {
         return allBookings.stream()
-                .filter(b -> !b.getStartTime().isBefore(start) && !b.getStartTime().isAfter(end))
+                .filter(b -> b.getFacilityId().equals(facilityId))
+                .filter(b -> b.getStatus() == BookingStatus.ACTIVE)
                 .collect(Collectors.toList());
     }
 

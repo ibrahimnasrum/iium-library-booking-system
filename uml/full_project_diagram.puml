@@ -1,0 +1,156 @@
+@startuml
+' Full project-level UML (package free for maximum compatibility)
+
+' Enums
+enum Role {
+  ADMIN
+  STAFF
+  STUDENT
+  POSTGRADUATE
+}
+
+enum FacilityStatus {
+  AVAILABLE
+  BOOKED
+  MAINTENANCE
+  TEMPORARILY_CLOSED
+  RESERVED
+}
+
+enum FacilityType {
+  ROOM
+  CARREL_ROOM
+  DISCUSSION_ROOM
+  COMPUTER_LAB
+  AUDITORIUM
+  VIEWING_ROOM
+  EXHIBITION_AREA
+  RESEARCH_ROOM
+  MULTI_PURPOSE_ROOM
+  SPECIAL_NEEDS_ROOM
+  STUDY_AREA
+}
+
+enum ReservationPrivilege {
+  OPEN
+  STUDENT_ONLY
+  STAFF_ONLY
+  POSTGRADUATE_ONLY
+  SPECIAL_NEEDS_ONLY
+  BOOK_VENDORS_ONLY
+  LIBRARY_USE_ONLY
+}
+
+enum BookingStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  COMPLETED
+}
+
+' Core classes (models)
+abstract class Facility {
+  - id: String
+  - name: String
+  - type: FacilityType
+  - location: String
+  - capacity: int
+  - privilege: ReservationPrivilege
+  - status: FacilityStatus
+  - imagePath: String
+  - notes: String
+  + isAvailable(): boolean
+  + setStatus(s: FacilityStatus)
+}
+
+class Room
+Room --|> Facility
+
+class Equipment {
+  - id: String
+  - name: String
+  - quantity: int
+}
+
+class Booking {
+  - id: String
+  - facilityId: String
+  - userId: String
+  - start: LocalDateTime
+  - end: LocalDateTime
+  - status: BookingStatus
+  + overlapsWith(b: Booking): boolean
+}
+
+class User {
+  - matricNo: String
+  - password: String
+  - name: String
+  - role: Role
+  - myBookings: List<Booking>
+  + canBook(f: Facility): boolean
+  + addBooking(b: Booking)
+}
+
+class SessionManager {
+  - currentUser: User
+  + getCurrentUser(): User
+}
+
+' Services
+class AuthService {
+  + login(matric: String, pwd: String): User
+  + isAdmin(u: User): boolean
+}
+
+class FacilityService {
+  + getAllFacilities(): List<Facility>
+  + findFacilityById(id: String): Facility
+  + getFacilitiesByStatus(s: FacilityStatus): List<Facility>
+  + updateFacilityStatus(id: String, s: FacilityStatus): boolean
+}
+
+class BookingPolicy {
+  + validateBooking(user: User, facility: Facility, start, end): boolean
+}
+
+class BookingService {
+  - allBookings: List<Booking>
+  + createBooking(user: User, facilityId: String, start, end): Booking
+  + cancelBooking(bookingId: String): boolean
+  + getUserBookings(userId: String): List<Booking>
+  + hasBookingConflict(facilityId: String, start, end): boolean
+}
+
+' View components / pages
+class FacilityCard {
+  - facility: Facility
+  + updateStatus(s: FacilityStatus)
+  + setOnClick(handler)
+}
+
+class NavigationSidebar { + createNavButton(id): Button }
+
+class LoginPage { + handleLogin() + clearFields() }
+class DashboardPage { + showSummary() }
+class FacilitiesPage { + loadData() + filterFacilities() + refreshFacilityStatuses() }
+class FacilityDetailPage { + setFacility(f: Facility) + refreshFacility() }
+class BookingPage { + createBooking() }
+class MyBookingsPage { + showBookings() }
+class AdminPanelPage { + manageFacilities() }
+
+class MainApplication { + start(stage) + showLoginPage() + handleLoginSuccess(user: User) }
+class MainLayout { - currentUser: User + showPage(pageId: String) + refreshAllFacilityDisplays() }
+
+' Relationships
+User "1" -- "0..*" Booking : owns
+Facility "1" -- "0..*" Booking : "reserved in"
+Facility "1" -- "0..*" Equipment : has
+MainLayout *-- "1" FacilitiesPage : contains
+FacilitiesPage *-- "0..*" FacilityCard : renders
+LoginPage --> AuthService : uses
+FacilitiesPage --> FacilityService : uses
+DashboardPage --> BookingService : uses
+BookingService --> FacilityService : uses
+
+@enduml

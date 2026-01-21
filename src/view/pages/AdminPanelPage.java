@@ -22,6 +22,7 @@ import java.util.List;
 public class AdminPanelPage extends VBox {
 
     private User currentUser;
+    private Runnable refreshCallback;
     private ObservableList<Booking> allBookingsList;
     private ObservableList<Facility> facilitiesList;
 
@@ -33,8 +34,9 @@ public class AdminPanelPage extends VBox {
     private Button updateFacilityButton;
     private Label statusLabel;
 
-    public AdminPanelPage(User user) {
+    public AdminPanelPage(User user, Runnable refreshCallback) {
         this.currentUser = user;
+        this.refreshCallback = refreshCallback;
         initializeComponents();
         setupLayout();
         loadData();
@@ -356,11 +358,19 @@ public class AdminPanelPage extends VBox {
 
         dialog.showAndWait().ifPresent(newStatus -> {
             if (newStatus != selectedFacility.getStatus()) {
-                // Update facility status
-                selectedFacility.setStatus(newStatus);
-                // In a real application, you'd save this to database
-                showToast("✅ Facility status updated successfully.", "success");
-                loadData(); // Refresh data
+                // Update facility status using FacilityService
+                boolean success = FacilityService.updateFacilityStatus(selectedFacility.getId(), newStatus);
+                if (success) {
+                    showToast("✅ Facility status updated successfully.", "success");
+                    loadData(); // Refresh admin panel data
+
+                    // Notify other pages to refresh
+                    if (refreshCallback != null) {
+                        refreshCallback.run();
+                    }
+                } else {
+                    showToast("❌ Failed to update facility status.", "error");
+                }
             }
         });
     }

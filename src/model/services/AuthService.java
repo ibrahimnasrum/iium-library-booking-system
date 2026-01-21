@@ -22,17 +22,17 @@ public class AuthService {
     }
 
     /**
-     * Determines user role based on matric number pattern
+     * Determines user role based on matric number pattern (IIUM system)
      * @param matricNo The matriculation number
      * @return The appropriate role
      */
     private static Role determineRole(String matricNo) {
-        if (matricNo.startsWith("2")) {
-            return Role.STAFF; // Staff/Admin matric numbers start with 2
+        if (matricNo.startsWith("0")) {
+            return Role.ADMIN; // Admin matric numbers start with 0
         } else if (matricNo.startsWith("1")) {
-            return Role.ADMIN; // Admin matric numbers start with 1
+            return Role.STAFF; // Staff matric numbers start with 1
         } else {
-            return Role.STUDENT; // Default to student
+            return Role.STUDENT; // Students: regular (2) and postgraduate (3)
         }
     }
 

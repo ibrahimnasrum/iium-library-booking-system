@@ -13,6 +13,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import model.Facility;
 import model.User;
+import model.enums.FacilityStatus;
 import model.services.FacilityService;
 import view.components.FacilityCard;
 
@@ -33,12 +34,11 @@ public class FacilitiesPage extends VBox {
     private ScrollPane facilitiesScrollPane;
     private FlowPane facilitiesContainer;
     private TextField searchField;
-    private ComboBox<String> filterTypeCombo;
     private ComboBox<String> filterLocationCombo;
     private ComboBox<String> filterStatusCombo;
 
     // Store facility cards for dynamic updates
-    private Map<Facility, FacilityCard> facilityCardMap;
+    private Map<String, FacilityCard> facilityCardMap;
 
     public FacilitiesPage(User user, Consumer<Facility> navigateToDetailCallback) {
         this.currentUser = user;
@@ -61,12 +61,6 @@ public class FacilitiesPage extends VBox {
         searchField.setStyle("-fx-font-size: 14px; -fx-padding: 8;");
         searchField.textProperty().addListener((obs, oldText, newText) -> filterFacilities());
 
-        filterTypeCombo = new ComboBox<>();
-        filterTypeCombo.getItems().addAll("All Types", "Room", "Study Area", "Computer Lab", "Auditorium", "Discussion Room");
-        filterTypeCombo.setValue("All Types");
-        filterTypeCombo.setStyle("-fx-font-size: 14px;");
-        filterTypeCombo.setOnAction(e -> filterFacilities());
-
         filterLocationCombo = new ComboBox<>();
         filterLocationCombo.getItems().addAll("All Locations", "Level 1", "Level 2", "Level 3");
         filterLocationCombo.setValue("All Locations");
@@ -74,7 +68,7 @@ public class FacilitiesPage extends VBox {
         filterLocationCombo.setOnAction(e -> filterFacilities());
 
         filterStatusCombo = new ComboBox<>();
-        filterStatusCombo.getItems().addAll("All Status", "Available", "Booked");
+        filterStatusCombo.getItems().addAll("All Status", "Available", "Booked", "Closed");
         filterStatusCombo.setValue("All Status");
         filterStatusCombo.setStyle("-fx-font-size: 14px;");
         filterStatusCombo.setOnAction(e -> filterFacilities());
@@ -102,15 +96,25 @@ public class FacilitiesPage extends VBox {
         header.setAlignment(Pos.CENTER);
         header.setPadding(new Insets(0, 0, 20, 0));
 
+        HBox titleRow = new HBox(15);
+        titleRow.setAlignment(Pos.CENTER);
+
         Label titleLabel = new Label("🏢 Browse Facilities");
         titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 28));
         titleLabel.setStyle("-fx-text-fill: #2c3e50;");
+
+        Button refreshButton = new Button("🔄 Refresh");
+        refreshButton.setFont(Font.font("Arial", FontWeight.NORMAL, 14));
+        refreshButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-background-radius: 20; -fx-padding: 8 16;");
+        refreshButton.setOnAction(e -> refreshFacilityStatuses());
+
+        titleRow.getChildren().addAll(titleLabel, refreshButton);
 
         Label subtitleLabel = new Label("Find and explore available facilities for booking");
         subtitleLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
         subtitleLabel.setStyle("-fx-text-fill: #7f8c8d;");
 
-        header.getChildren().addAll(titleLabel, subtitleLabel);
+        header.getChildren().addAll(titleRow, subtitleLabel);
         return header;
     }
 
@@ -132,7 +136,6 @@ public class FacilitiesPage extends VBox {
         HBox filterRow = new HBox(15);
         filterRow.setAlignment(Pos.CENTER_LEFT);
         filterRow.getChildren().addAll(
-            new Label("Type:"), filterTypeCombo,
             new Label("Location:"), filterLocationCombo,
             new Label("Status:"), filterStatusCombo
         );
@@ -172,7 +175,7 @@ public class FacilitiesPage extends VBox {
             FacilityCard card = new FacilityCard(facility);
 
             // Store reference for dynamic updates
-            facilityCardMap.put(facility, card);
+            facilityCardMap.put(facility.getId(), card);
 
             // Make card clickable
             card.setOnMouseClicked(e -> {
@@ -190,24 +193,43 @@ public class FacilitiesPage extends VBox {
         List<Facility> facilities = FacilityService.getAllFacilities();
         facilitiesList.clear();
         facilitiesList.addAll(facilities);
+
+        // Debug: print facility status counts to help diagnose missing 'Closed' items
+        long total = facilities.size();
+        long closedCount = facilities.stream().filter(f -> f.getStatus() == model.enums.FacilityStatus.TEMPORARILY_CLOSED).count();
+        long maintenanceCount = facilities.stream().filter(f -> f.getStatus() == model.enums.FacilityStatus.MAINTENANCE).count();
+        long availableCount = facilities.stream().filter(f -> f.getStatus() == model.enums.FacilityStatus.AVAILABLE).count();
+        System.out.println("FacilitiesPage: loadData() - total=" + total + " available=" + availableCount + " closed=" + closedCount + " maintenance=" + maintenanceCount);
+
+        if (closedCount > 0) {
+            System.out.println("FacilitiesPage: Closed facilities -> " + facilities.stream().filter(f -> f.getStatus() == model.enums.FacilityStatus.TEMPORARILY_CLOSED).map(Facility::getId).collect(Collectors.joining(", ")));
+        }
+
         filterFacilities();
     }
 
     public void refreshFacilityStatuses() {
+        System.out.println("FacilitiesPage: refreshFacilityStatuses() called");
+
         // Reload facilities data
         List<Facility> updatedFacilities = FacilityService.getAllFacilities();
+        System.out.println("FacilitiesPage: Loaded " + updatedFacilities.size() + " facilities");
 
         // Update each facility and its corresponding card
         for (Facility updatedFacility : updatedFacilities) {
-            FacilityCard card = facilityCardMap.get(updatedFacility);
+            FacilityCard card = facilityCardMap.get(updatedFacility.getId());
             if (card != null) {
                 // Update the card's status display
+                System.out.println("FacilitiesPage: Updating facility " + updatedFacility.getId() + " status to " + updatedFacility.getStatus());
                 card.updateStatus(updatedFacility.getStatus());
+            } else {
+                System.out.println("FacilitiesPage: No card found for facility " + updatedFacility.getId());
             }
         }
 
         // Refresh the filtered list
         filterFacilities();
+        System.out.println("FacilitiesPage: refreshFacilityStatuses() completed");
     }
 
     private void filterFacilities() {
@@ -215,13 +237,30 @@ public class FacilitiesPage extends VBox {
             .filter(f -> searchField.getText().isEmpty() ||
                         f.getName().toLowerCase().contains(searchField.getText().toLowerCase()) ||
                         f.getId().toLowerCase().contains(searchField.getText().toLowerCase()))
-            .filter(f -> filterTypeCombo.getValue().equals("All Types") ||
-                        f.getType().toString().contains(filterTypeCombo.getValue()))
             .filter(f -> filterLocationCombo.getValue().equals("All Locations") ||
                         f.getLocation().contains(filterLocationCombo.getValue()))
-            .filter(f -> filterStatusCombo.getValue().equals("All Status") ||
-                        f.getStatus().toString().equalsIgnoreCase(filterStatusCombo.getValue()))
+            .filter(f -> {
+                String selectedStatus = filterStatusCombo.getValue();
+                if (selectedStatus.equals("All Status")) {
+                    return true;
+                }
+                // Handle status mapping
+                FacilityStatus facilityStatus = f.getStatus();
+                switch (selectedStatus) {
+                    case "Available":
+                        return facilityStatus == FacilityStatus.AVAILABLE;
+                    case "Booked":
+                        return facilityStatus == FacilityStatus.BOOKED;
+                    case "Closed":
+                        return facilityStatus == FacilityStatus.TEMPORARILY_CLOSED;
+                    default:
+                        return false;
+                }
+            })
             .collect(Collectors.toList());
+
+        // Debug logging
+        System.out.println("FacilitiesPage: filterFacilities() - selectedStatus='" + filterStatusCombo.getValue() + "', search='" + searchField.getText() + "', location='" + filterLocationCombo.getValue() + "' -> matching=" + filtered.size());
 
         filteredFacilitiesList.clear();
         filteredFacilitiesList.addAll(filtered);
