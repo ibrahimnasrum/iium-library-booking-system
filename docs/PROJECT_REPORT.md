@@ -40,7 +40,7 @@ This project addresses those gaps by providing a single desktop application with
 
 ## 4. Requirements Analysis
 ### Functional Requirements
-- User authentication by IIUM matric number (role extracted from matric prefix: 0 Admin, 1 Staff, 2 Student, 3 Postgraduate).
+- User authentication by IIUM matric number (roles derived from matric prefix; mapping is configurable).
 - Facility browsing with search, location, and status filters.
 - Timing-based booking with validation and conflict checking.
 - Booking history and cancellation features for users.
