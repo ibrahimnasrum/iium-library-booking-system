@@ -111,36 +111,65 @@ class FacilityService {
 }
 
 class BookingPolicy {
-  + validateBooking(user: User, facility: Facility, start, end): boolean
+  + validateBooking(user: User, facility: Facility, start: LocalDateTime, end: LocalDateTime): boolean
 }
 
 class BookingService {
   - allBookings: List<Booking>
-  + createBooking(user: User, facilityId: String, start, end): Booking
+  + createBooking(user: User, facilityId: String, start: LocalDateTime, end: LocalDateTime): Booking
   + cancelBooking(bookingId: String): boolean
   + getUserBookings(userId: String): List<Booking>
-  + hasBookingConflict(facilityId: String, start, end): boolean
+  + hasBookingConflict(facilityId: String, start: LocalDateTime, end: LocalDateTime): boolean
 }
 
 ' View components / pages
 class FacilityCard {
   - facility: Facility
-  + updateStatus(s: FacilityStatus)
-  + setOnClick(handler)
+  + updateStatus(s: FacilityStatus): void
+  + setOnClick(handler: Runnable): void
 }
 
-class NavigationSidebar { + createNavButton(id): Button }
+class NavigationSidebar {
+  + createNavButton(id: String): Button
+} 
 
-class LoginPage { + handleLogin() + clearFields() }
-class DashboardPage { + showSummary() }
-class FacilitiesPage { + loadData() + filterFacilities() + refreshFacilityStatuses() }
-class FacilityDetailPage { + setFacility(f: Facility) + refreshFacility() }
-class BookingPage { + createBooking() }
-class MyBookingsPage { + showBookings() }
-class AdminPanelPage { + manageFacilities() }
+class LoginPage {
+  + handleLogin(): void
+  + clearFields(): void
+}
+class DashboardPage {
+  + showSummary(): void
+}
+class FacilitiesPage {
+  + loadData(): void
+  + filterFacilities(): void
+  + refreshFacilityStatuses(): void
+}
+class FacilityDetailPage {
+  + setFacility(f: Facility): void
+  + refreshFacility(): void
+}
+class BookingPage {
+  + createBooking(): Booking
+}
+class MyBookingsPage {
+  + showBookings(): List<Booking>
+}
+class AdminPanelPage {
+  + manageFacilities(): void
+}
 
-class MainApplication { + start(stage) + showLoginPage() + handleLoginSuccess(user: User) }
-class MainLayout { - currentUser: User + showPage(pageId: String) + refreshAllFacilityDisplays() }
+class MainApplication {
+  + start(stage: Stage): void
+  + showLoginPage(): void
+  + handleLoginSuccess(user: User): void
+}
+
+class MainLayout {
+  - currentUser: User
+  + showPage(pageId: String): void
+  + refreshAllFacilityDisplays(): void
+}
 
 ' Relationships
 User "1" -- "0..*" Booking : owns
