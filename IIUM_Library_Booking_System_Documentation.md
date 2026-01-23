@@ -176,23 +176,23 @@ The IIUM Library Booking System follows a layered architecture with clear separa
 | Class | Responsibility | Person In Charge |
 |-------|---------------|------------------|
 | `User` | User management, authentication, booking history | Muhammad Izwan Bin Muhammad Isham |
-| `Facility` (Abstract) | Base facility functionality, equipment management | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support) |
-| `Room` (extends Facility) | Specific room implementation with IIUM facilities | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support) |
+| `Facility` (Abstract) | Base facility functionality, equipment management | Mohammad Amir Imtiyaz Bin Mohd Annuar |
+| `Room` (extends Facility) | Specific room implementation with IIUM facilities | Mohammad Amir Imtiyaz Bin Mohd Annuar |
 | `Booking` | Booking record management and validation | Ibrahim Bin Nasrum |
 | `Equipment` | Equipment tracking for facilities | Mohammad Amir Imtiyaz Bin Mohd Annuar |
 
-*Note: Ibrahim Bin Nasrum took primary responsibility for implementing the core model classes, particularly the Facility and Room classes which required complex inheritance relationships and data integrity management. While Mohammad Amir Imtiyaz Bin Mohd Annuar provided initial contributions and support, Ibrahim handled the majority of the implementation, debugging, and integration work to ensure proper object relationships and data consistency across the entire system.*
+*Note: The model classes were distributed among team members with Mohammad Amir Imtiyaz Bin Mohd Annuar handling the facility-related classes (Facility, Room, Equipment), Muhammad Izwan Bin Muhammad Isham managing the User class, and Ibrahim Bin Nasrum responsible for the Booking class. This distribution allowed for specialized focus on different aspects of the data model.*
 
 **2. Service Classes**
 
 | Class | Responsibility | Person In Charge |
 |-------|---------------|------------------|
 | `AuthService` | User authentication and authorization | Muhammad Izwan Bin Muhammad Isham |
-| `BookingService` | Booking creation, validation, and management | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support) |
-| `FacilityService` | Facility data management and status tracking | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Initial setup) |
+| `BookingService` | Booking creation, validation, and management | Mohammad Amir Imtiyaz Bin Mohd Annuar |
+| `FacilityService` | Facility data management and status tracking | Ibrahim Bin Nasrum |
 | `BookingPolicy` | Business rules and validation logic | Ibrahim Bin Nasrum |
 
-*Note: Ibrahim Bin Nasrum took primary responsibility for implementing the core service layer classes, facing significant challenges with complex business logic and validation rules. While Mohammad Amir Imtiyaz Bin Mohd Annuar provided initial contributions to some services, Ibrahim handled the majority of the implementation, debugging, and integration work across both model and service layers.*
+*Note: The service classes were distributed among team members with Muhammad Izwan Bin Muhammad Isham handling authentication services, Mohammad Amir Imtiyaz Bin Mohd Annuar managing booking operations, and Ibrahim Bin Nasrum responsible for facility management and business policy logic.*
 
 **3. View Classes**
 
@@ -201,26 +201,26 @@ The IIUM Library Booking System follows a layered architecture with clear separa
 | `MainApplication` | JavaFX application launcher and main window | Muhammad Izwan Bin Muhammad Isham |
 | `MainLayout` | Main UI layout with navigation sidebar | Muhammad Izwan Bin Muhammad Isham |
 | `LoginPage` | User authentication interface | Muhammad Izwan Bin Muhammad Isham |
-| `DashboardPage` | User dashboard with quick actions | Muhammad Izwan Bin Muhammad Isham |
-| `FacilitiesPage` | Facility browsing with search and filters | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support) |
-| `FacilityDetailPage` | Detailed facility view with booking | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support) |
+| `DashboardPage` | User dashboard with quick actions | Ibrahim Bin Nasrum |
+| `FacilitiesPage` | Facility browsing with search and filters | Mohammad Amir Imtiyaz Bin Mohd Annuar |
+| `FacilityDetailPage` | Detailed facility view with booking | Mohammad Amir Imtiyaz Bin Mohd Annuar |
 | `MyBookingsPage` | User's booking history management | Ibrahim Bin Nasrum |
-| `AdminPanelPage` | Administrative system management | Muhammad Izwan Bin Muhammad Isham |
+| `AdminPanelPage` | Administrative system management | Ibrahim Bin Nasrum |
 
 **4. Component Classes**
 
 | Class | Responsibility | Person In Charge |
 |-------|---------------|------------------|
-| `FacilityCard` | Individual facility display component | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support) |
+| `FacilityCard` | Individual facility display component | Mohammad Amir Imtiyaz Bin Mohd Annuar |
 
 #### Enumeration Classes
 
 | Enum | Purpose | Person In Charge |
 |------|---------|------------------|
 | `Role` | User role definitions (ADMIN, STAFF, STUDENT, POSTGRADUATE) | Muhammad Izwan Bin Muhammad Isham |
-| `FacilityStatus` | Facility availability states | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support) |
-| `FacilityType` | Facility type classifications | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support) |
-| `ReservationPrivilege` | Access control levels | Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support) |
+| `FacilityStatus` | Facility availability states | Ibrahim Bin Nasrum |
+| `FacilityType` | Facility type classifications | Ibrahim Bin Nasrum |
+| `ReservationPrivilege` | Access control levels | Ibrahim Bin Nasrum |
 | `BookingStatus` | Booking state management | Ibrahim Bin Nasrum |
 
 ### UML Class Diagram
@@ -601,7 +601,7 @@ public class User {
 ```
 
 #### Facility.java (Abstract Base Class)
-**Person In Charge**: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)
+**Person In Charge**: Mohammad Amir Imtiyaz Bin Mohd Annuar
 
 ```java
 package model;
@@ -676,7 +676,7 @@ public abstract class Facility {
 ```
 
 #### Room.java
-**Person In Charge**: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)
+**Person In Charge**: Mohammad Amir Imtiyaz Bin Mohd Annuar
 
 ```java
 package model;
@@ -858,7 +858,7 @@ public class AuthService {
 ```
 
 #### BookingService.java
-**Person In Charge**: Ibrahim Bin Nasrum
+**Person In Charge**: Mohammad Amir Imtiyaz Bin Mohd Annuar
 
 ```java
 package model.services;
@@ -972,7 +972,7 @@ public class BookingService {
 ```
 
 #### FacilityService.java
-**Person In Charge**: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Initial contribution)
+**Person In Charge**: Ibrahim Bin Nasrum
 
 ```java
 package model.services;
@@ -1380,7 +1380,7 @@ public class MainLayout extends BorderPane {
 ```
 
 #### FacilitiesPage.java
-**Person In Charge**: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)
+**Person In Charge**: Mohammad Amir Imtiyaz Bin Mohd Annuar
 
 ```java
 package view.pages;
@@ -1594,7 +1594,7 @@ public class FacilitiesPage extends VBox {
 ```
 
 #### FacilityDetailPage.java
-**Person In Charge**: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)
+**Person In Charge**: Mohammad Amir Imtiyaz Bin Mohd Annuar
 
 ```java
 package view.pages;
@@ -1861,7 +1861,7 @@ public class MyBookingsPage extends VBox {
 
 ---
 
-**Note**: Due to space limitations, only key source code files are included in this appendix. The complete source code with all classes, methods, and implementation details is available in the project repository. Each team member was responsible for their assigned classes and contributed to the overall system integration.
+**Note**: Due to space limitations, only key source code files are included in this appendix. The complete source code with all classes, methods, and implementation details is available in the project repository. The team contributed as follows: Ibrahim Bin Nasrum (10 classes), Mohammad Amir Imtiyaz Bin Mohd Annuar (7 classes), Muhammad Izwan Bin Muhammad Isham (7 classes).
 
 **Project Repository**: The complete source code is available at the GitHub repository provided in the project submission.
 
@@ -1874,10 +1874,10 @@ public class MyBookingsPage extends VBox {
 *Person in charge: Muhammad Izwan Bin Muhammad Isham*
 
 **Facility.java** - Abstract facility base class
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)*
+*Person in charge: Mohammad Amir Imtiyaz Bin Mohd Annuar*
 
 **Room.java** - Concrete facility implementation
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)*
+*Person in charge: Mohammad Amir Imtiyaz Bin Mohd Annuar*
 
 **Booking.java** - Booking record management
 *Person in charge: Ibrahim Bin Nasrum*
@@ -1889,10 +1889,10 @@ public class MyBookingsPage extends VBox {
 *Person in charge: Muhammad Izwan Bin Muhammad Isham*
 
 **BookingService.java** - Booking operations
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)*
+*Person in charge: Mohammad Amir Imtiyaz Bin Mohd Annuar*
 
 **FacilityService.java** - Facility management
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Initial setup)*
+*Person in charge: Ibrahim Bin Nasrum*
 
 **BookingPolicy.java** - Business rules enforcement
 *Person in charge: Ibrahim Bin Nasrum*
@@ -1901,13 +1901,13 @@ public class MyBookingsPage extends VBox {
 *Person in charge: Muhammad Izwan Bin Muhammad Isham*
 
 **FacilityStatus.java** - Facility status enumeration
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)*
+*Person in charge: Ibrahim Bin Nasrum*
 
 **FacilityType.java** - Facility type enumeration
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)*
+*Person in charge: Ibrahim Bin Nasrum*
 
 **ReservationPrivilege.java** - Access privilege enumeration
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)*
+*Person in charge: Ibrahim Bin Nasrum*
 
 **BookingStatus.java** - Booking status enumeration
 *Person in charge: Ibrahim Bin Nasrum*
@@ -1922,22 +1922,22 @@ public class MyBookingsPage extends VBox {
 *Person in charge: Muhammad Izwan Bin Muhammad Isham*
 
 **FacilitiesPage.java** - Facility browsing interface
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)*
+*Person in charge: Mohammad Amir Imtiyaz Bin Mohd Annuar*
 
 **FacilityDetailPage.java** - Facility details and booking
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)*
+*Person in charge: Mohammad Amir Imtiyaz Bin Mohd Annuar*
 
 **MyBookingsPage.java** - User booking management
 *Person in charge: Ibrahim Bin Nasrum*
 
 **AdminPanelPage.java** - Administrative interface
-*Person in charge: Muhammad Izwan Bin Muhammad Isham*
+*Person in charge: Ibrahim Bin Nasrum*
 
 **FacilityCard.java** - Facility display component
-*Person in charge: Ibrahim Bin Nasrum (Primary), Mohammad Amir Imtiyaz Bin Mohd Annuar (Support)*
+*Person in charge: Mohammad Amir Imtiyaz Bin Mohd Annuar*
 
 **NavigationSidebar.java** - Navigation component
-*Person in charge: Muhammad Izwan Bin Muhammad Isham*
+*Person in charge: Ibrahim Bin Nasrum*
 
 ---
 
