@@ -15,11 +15,11 @@ import view.pages.*;
 public class MainLayout extends BorderPane {
 
     private User currentUser;
+    private Runnable logoutCallback;
 
     // Pages
     private DashboardPage dashboardPage;
     private FacilitiesPage facilitiesPage;
-    private BookingPage bookingPage;
     private MyBookingsPage myBookingsPage;
     private AdminPanelPage adminPanelPage;
     private FacilityDetailPage facilityDetailPage;
@@ -30,13 +30,17 @@ public class MainLayout extends BorderPane {
     // Navigation buttons
     private Button dashboardBtn;
     private Button facilitiesBtn;
-    private Button bookingBtn;
     private Button myBookingsBtn;
     private Button adminBtn;
     private Button logoutBtn;
 
     public MainLayout(User user) {
+        this(user, () -> System.exit(0)); // Default logout behavior
+    }
+
+    public MainLayout(User user, Runnable logoutCallback) {
         this.currentUser = user;
+        this.logoutCallback = logoutCallback;
         initializePages();
         setupLayout();
         showPage("dashboard"); // Default page
@@ -45,8 +49,7 @@ public class MainLayout extends BorderPane {
     private void initializePages() {
         dashboardPage = new DashboardPage(currentUser, this::showPage);
         facilitiesPage = new FacilitiesPage(currentUser, this::navigateToFacilityDetail);
-        bookingPage = new BookingPage(currentUser, this::refreshFacilitiesPage);
-        myBookingsPage = new MyBookingsPage(currentUser);
+        myBookingsPage = new MyBookingsPage(currentUser, this::refreshFacilitiesPage);
         facilityDetailPage = new FacilityDetailPage(currentUser, this::showPage);
 
         // Only create admin panel if user is admin
@@ -85,14 +88,9 @@ public class MainLayout extends BorderPane {
         VBox userSection = createUserSection();
         sidebar.getChildren().add(userSection);
 
-        // Logout button
-        logoutBtn = new Button("🚪 Logout");
-        logoutBtn.setMaxWidth(Double.MAX_VALUE);
-        logoutBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 14px; " +
-                          "-fx-padding: 12; -fx-background-radius: 8; -fx-font-weight: bold;");
-        logoutBtn.setOnAction(e -> handleLogout());
-
-        sidebar.getChildren().add(logoutBtn);
+        // User action buttons
+        VBox actionSection = createActionSection();
+        sidebar.getChildren().add(actionSection);
 
         return sidebar;
     }
@@ -121,10 +119,9 @@ public class MainLayout extends BorderPane {
         // Navigation buttons
         dashboardBtn = createNavButton("🏠 Dashboard", "dashboard");
         facilitiesBtn = createNavButton("🏢 Facilities", "facilities");
-        bookingBtn = createNavButton("📅 Book Now", "booking");
         myBookingsBtn = createNavButton("📋 My Bookings", "my-bookings");
 
-        navBox.getChildren().addAll(dashboardBtn, facilitiesBtn, bookingBtn, myBookingsBtn);
+        navBox.getChildren().addAll(dashboardBtn, facilitiesBtn, myBookingsBtn);
 
         // Admin button (only for admin users)
         if (currentUser.getRole().toString().equals("ADMIN")) {
@@ -209,10 +206,6 @@ public class MainLayout extends BorderPane {
                     setActiveButton(facilitiesBtn);
                 }
                 break;
-            case "booking":
-                content = bookingPage;
-                setActiveButton(bookingBtn);
-                break;
             case "my-bookings":
                 content = myBookingsPage;
                 setActiveButton(myBookingsBtn);
@@ -249,10 +242,31 @@ public class MainLayout extends BorderPane {
         }
     }
 
+    private VBox createActionSection() {
+        VBox actionBox = new VBox(8);
+        actionBox.setPadding(new Insets(10, 0, 0, 0));
+
+        // Switch User button
+        Button switchUserBtn = new Button("🔄 Switch User");
+        switchUserBtn.setMaxWidth(Double.MAX_VALUE);
+        switchUserBtn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 13px; " +
+                              "-fx-padding: 10; -fx-background-radius: 6; -fx-font-weight: bold;");
+        switchUserBtn.setOnAction(e -> handleLogout()); // Same action as logout for now
+
+        // Logout button
+        logoutBtn = new Button("🚪 Logout & Exit");
+        logoutBtn.setMaxWidth(Double.MAX_VALUE);
+        logoutBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 13px; " +
+                          "-fx-padding: 10; -fx-background-radius: 6; -fx-font-weight: bold;");
+        logoutBtn.setOnAction(e -> { System.exit(0); }); // Actually exit the application
+
+        actionBox.getChildren().addAll(switchUserBtn, logoutBtn);
+        return actionBox;
+    }
+
     private void resetButtonStyles() {
         dashboardBtn.getStyleClass().remove("active");
         facilitiesBtn.getStyleClass().remove("active");
-        bookingBtn.getStyleClass().remove("active");
         myBookingsBtn.getStyleClass().remove("active");
 
         dashboardBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: rgba(255,255,255,0.8); " +
@@ -261,9 +275,6 @@ public class MainLayout extends BorderPane {
         facilitiesBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: rgba(255,255,255,0.8); " +
                              "-fx-font-size: 14px; -fx-padding: 12 20; -fx-background-radius: 8; " +
                              "-fx-font-weight: normal;");
-        bookingBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: rgba(255,255,255,0.8); " +
-                          "-fx-font-size: 14px; -fx-padding: 12 20; -fx-background-radius: 8; " +
-                          "-fx-font-weight: normal;");
         myBookingsBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: rgba(255,255,255,0.8); " +
                              "-fx-font-size: 14px; -fx-padding: 12 20; -fx-background-radius: 8; " +
                              "-fx-font-weight: normal;");
@@ -284,8 +295,9 @@ public class MainLayout extends BorderPane {
     }
 
     private void handleLogout() {
-        // In a real application, you'd handle logout properly
-        // For now, just exit the application
-        System.exit(0);
+        // Call the logout callback to switch back to login screen
+        if (logoutCallback != null) {
+            logoutCallback.run();
+        }
     }
 }

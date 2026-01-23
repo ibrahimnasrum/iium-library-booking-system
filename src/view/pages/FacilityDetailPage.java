@@ -11,6 +11,7 @@ import javafx.scene.text.FontWeight;
 import model.Facility;
 import model.User;
 import model.Equipment;
+import model.Booking;
 import model.services.BookingService;
 import model.services.BookingPolicy;
 import model.enums.FacilityStatus;
@@ -31,7 +32,6 @@ public class FacilityDetailPage extends VBox {
     private ImageView facilityImage;
     private Label nameLabel;
     private Label idLabel;
-    private Label typeLabel;
     private Label locationLabel;
     private Label capacityLabel;
     private Label statusLabel;
@@ -39,6 +39,12 @@ public class FacilityDetailPage extends VBox {
     private TextArea descriptionArea;
     private VBox equipmentList;
     private VBox bookingSection;
+
+    // Booking components
+    private DatePicker startDatePicker;
+    private DatePicker endDatePicker;
+    private ComboBox<String> startTimeCombo;
+    private ComboBox<String> endTimeCombo;
 
     public FacilityDetailPage(User user, Consumer<String> navigateCallback) {
         this.currentUser = user;
@@ -57,24 +63,33 @@ public class FacilityDetailPage extends VBox {
         nameLabel = new Label();
         nameLabel.setFont(Font.font("Arial", FontWeight.BOLD, 24));
         nameLabel.setStyle("-fx-text-fill: #2c3e50;");
+        nameLabel.setWrapText(true);
+        nameLabel.setMaxWidth(400);
 
         idLabel = new Label();
         idLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 14px;");
-
-        typeLabel = new Label();
-        typeLabel.setStyle("-fx-font-size: 16px;");
+        idLabel.setWrapText(true);
+        idLabel.setMaxWidth(400);
 
         locationLabel = new Label();
         locationLabel.setStyle("-fx-font-size: 16px;");
+        locationLabel.setWrapText(true);
+        locationLabel.setMaxWidth(400);
 
         capacityLabel = new Label();
         capacityLabel.setStyle("-fx-font-size: 16px;");
+        capacityLabel.setWrapText(true);
+        capacityLabel.setMaxWidth(400);
 
         statusLabel = new Label();
         statusLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        statusLabel.setWrapText(true);
+        statusLabel.setMaxWidth(400);
 
         privilegeLabel = new Label();
         privilegeLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666;");
+        privilegeLabel.setWrapText(true);
+        privilegeLabel.setMaxWidth(400);
 
         descriptionArea = new TextArea();
         descriptionArea.setEditable(false);
@@ -84,6 +99,12 @@ public class FacilityDetailPage extends VBox {
 
         equipmentList = new VBox(5);
         equipmentList.setPadding(new Insets(10));
+
+        // Initialize booking components
+        startDatePicker = new DatePicker(LocalDate.now());
+        endDatePicker = new DatePicker(LocalDate.now());
+        startTimeCombo = new ComboBox<>();
+        endTimeCombo = new ComboBox<>();
 
         setupBookingSection();
     }
@@ -100,32 +121,104 @@ public class FacilityDetailPage extends VBox {
         HBox dateTimeBox = new HBox(15);
         dateTimeBox.setAlignment(Pos.CENTER_LEFT);
 
-        DatePicker startDatePicker = new DatePicker(LocalDate.now());
-        DatePicker endDatePicker = new DatePicker(LocalDate.now());
+        // Reset date pickers to today
+        startDatePicker.setValue(LocalDate.now());
+        endDatePicker.setValue(LocalDate.now());
 
-        ComboBox<String> startTimeCombo = new ComboBox<>();
-        ComboBox<String> endTimeCombo = new ComboBox<>();
+        // Function to populate time combos based on selected date
+        Runnable populateTimeCombos = () -> {
+            LocalDate selectedDate = startDatePicker.getValue();
+            startTimeCombo.getItems().clear();
+            endTimeCombo.getItems().clear();
 
-        // Populate time combos
-        for (int hour = 8; hour <= 22; hour++) {
-            for (int minute = 0; minute < 60; minute += 30) {
-                String time = String.format("%02d:%02d", hour, minute);
-                startTimeCombo.getItems().add(time);
-                endTimeCombo.getItems().add(time);
+            LocalDateTime earliestAllowed;
+            if (selectedDate.equals(LocalDate.now())) {
+                // Today: only times at least 30 minutes from now
+                earliestAllowed = LocalDateTime.now().plusMinutes(30);
+            } else {
+                // Future date: any business hour
+                earliestAllowed = LocalDateTime.of(selectedDate, LocalTime.of(8, 0));
             }
+
+            for (int hour = 8; hour <= 22; hour++) {
+                for (int minute = 0; minute < 60; minute += 30) {
+                    LocalDateTime timeSlot = LocalDateTime.of(selectedDate, LocalTime.of(hour, minute));
+                    if (timeSlot.isAfter(earliestAllowed) || timeSlot.isEqual(earliestAllowed) ||
+                        !selectedDate.equals(LocalDate.now())) {
+                        String time = String.format("%02d:%02d", hour, minute);
+                        startTimeCombo.getItems().add(time);
+                        endTimeCombo.getItems().add(time);
+                    }
+                }
+            }
+
+            // Set default values if available
+            if (!startTimeCombo.getItems().isEmpty()) {
+                startTimeCombo.setValue(startTimeCombo.getItems().get(0));
+                endTimeCombo.setValue(startTimeCombo.getItems().get(0));
+            }
+        };
+
+        // Initial population
+        populateTimeCombos.run();
+
+        // Update times when date changes
+        startDatePicker.setOnAction(e -> populateTimeCombos.run());
+
+        // Set default start time to next available slot (at least 30 minutes from now)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nextAvailable = now.plusMinutes(30);
+        
+        // Round up to next 30-minute interval
+        int minute = nextAvailable.getMinute();
+        int roundedMinute = ((minute + 29) / 30) * 30; // Round up to nearest 30
+        if (roundedMinute >= 60) {
+            nextAvailable = nextAvailable.plusHours(1).withMinute(0);
+        } else {
+            nextAvailable = nextAvailable.withMinute(roundedMinute);
         }
-        startTimeCombo.setValue("09:00");
-        endTimeCombo.setValue("10:00");
+        
+        // Ensure within business hours
+        LocalDate startDate = LocalDate.now();
+        if (nextAvailable.getHour() < 8) {
+            nextAvailable = nextAvailable.withHour(8).withMinute(0);
+        } else if (nextAvailable.getHour() >= 22) {
+            // Next day
+            startDate = LocalDate.now().plusDays(1);
+            startDatePicker.setValue(startDate);
+            nextAvailable = LocalDateTime.of(startDate, LocalTime.of(8, 0));
+            populateTimeCombos.run(); // Refresh time options for new date
+        }
+        startDatePicker.setValue(startDate);
+
+        // Set default time if available in combo
+        String defaultStartTime = String.format("%02d:%02d", nextAvailable.getHour(), nextAvailable.getMinute());
+        if (startTimeCombo.getItems().contains(defaultStartTime)) {
+            startTimeCombo.setValue(defaultStartTime);
+        } else if (!startTimeCombo.getItems().isEmpty()) {
+            startTimeCombo.setValue(startTimeCombo.getItems().get(0));
+        }
+
+        // Set end time to minimum booking duration after start
+        LocalDateTime endTime = nextAvailable.plusMinutes(BookingPolicy.getMinBookingMinutes());
+        LocalDate endDate = startDate;
+        if (endTime.getHour() >= 22) {
+            endDate = startDate.plusDays(1);
+        }
+        endDatePicker.setValue(endDate);
+        
+        // Set default end time if available in combo
+        String defaultEndTime = String.format("%02d:%02d", endTime.getHour(), endTime.getMinute());
+        if (endTimeCombo.getItems().contains(defaultEndTime)) {
+            endTimeCombo.setValue(defaultEndTime);
+        } else if (!endTimeCombo.getItems().isEmpty()) {
+            endTimeCombo.setValue(endTimeCombo.getItems().get(0));
+        }
 
         dateTimeBox.getChildren().addAll(
             new Label("Start:"), startDatePicker, startTimeCombo,
             new Label("End:"), endDatePicker, endTimeCombo
         );
-
-        // Book button
-        Button bookButton = new Button("Book Now");
-        bookButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10 20;");
-        bookButton.setOnAction(e -> handleBooking(startDatePicker, endDatePicker, startTimeCombo, endTimeCombo));
 
         // Booking rules
         Label rulesLabel = new Label("Booking Rules:");
@@ -137,13 +230,23 @@ public class FacilityDetailPage extends VBox {
         rulesArea.setPrefRowCount(3);
         rulesArea.setText(getBookingRules());
 
-        bookingSection.getChildren().addAll(bookingTitle, dateTimeBox, bookButton, rulesLabel, rulesArea);
+        // Make Booking button
+        Button bookButton = new Button("Make Booking");
+        bookButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 16px; " +
+                           "-fx-font-weight: bold; -fx-padding: 12 24; -fx-background-radius: 5;");
+        bookButton.setOnAction(e -> handleBooking());
+
+        bookingSection.getChildren().addAll(bookingTitle, dateTimeBox, rulesLabel, rulesArea, bookButton);
     }
 
     private void setupLayout() {
         setSpacing(20);
         setPadding(new Insets(30));
         setStyle("-fx-background-color: #f8f9fa;");
+
+        // Top buttons
+        HBox topButtons = new HBox(10);
+        topButtons.setAlignment(Pos.CENTER_LEFT);
 
         // Back button
         Button backButton = new Button("← Back to Facilities");
@@ -152,6 +255,8 @@ public class FacilityDetailPage extends VBox {
                 navigateCallback.accept("facilities");
             }
         });
+
+        topButtons.getChildren().addAll(backButton);
 
         // Main content layout
         HBox mainContent = new HBox(30);
@@ -168,16 +273,14 @@ public class FacilityDetailPage extends VBox {
         infoGrid.setHgap(15);
         infoGrid.setVgap(10);
 
-        infoGrid.add(new Label("Type:"), 0, 0);
-        infoGrid.add(typeLabel, 1, 0);
-        infoGrid.add(new Label("Location:"), 0, 1);
-        infoGrid.add(locationLabel, 1, 1);
-        infoGrid.add(new Label("Capacity:"), 0, 2);
-        infoGrid.add(capacityLabel, 1, 2);
-        infoGrid.add(new Label("Status:"), 0, 3);
-        infoGrid.add(statusLabel, 1, 3);
-        infoGrid.add(new Label("Access:"), 0, 4);
-        infoGrid.add(privilegeLabel, 1, 4);
+        infoGrid.add(new Label("Location:"), 0, 0);
+        infoGrid.add(locationLabel, 1, 0);
+        infoGrid.add(new Label("Capacity:"), 0, 1);
+        infoGrid.add(capacityLabel, 1, 1);
+        infoGrid.add(new Label("Status:"), 0, 2);
+        infoGrid.add(statusLabel, 1, 2);
+        infoGrid.add(new Label("Access:"), 0, 3);
+        infoGrid.add(privilegeLabel, 1, 3);
 
         // Equipment section
         VBox equipmentSection = new VBox(10);
@@ -196,7 +299,7 @@ public class FacilityDetailPage extends VBox {
         mainContent.getChildren().addAll(leftSide, rightSide);
 
         // Add all to main layout
-        getChildren().addAll(backButton, mainContent, bookingSection);
+        getChildren().addAll(topButtons, mainContent, bookingSection);
     }
 
     public void setFacility(Facility facility) {
@@ -236,9 +339,9 @@ public class FacilityDetailPage extends VBox {
         }
 
         // Update labels
-        nameLabel.setText(facility.getName());
+        String displayName = cleanFacilityName(facility.getName(), facility.getType()).toUpperCase();
+        nameLabel.setText(displayName);
         idLabel.setText("ID: " + facility.getId());
-        typeLabel.setText(facility.getType().toString());
         locationLabel.setText(facility.getLocation());
         capacityLabel.setText(String.valueOf(facility.getCapacity()));
 
@@ -258,6 +361,14 @@ public class FacilityDetailPage extends VBox {
         // Update booking section visibility
         bookingSection.setVisible(facility.isAvailable());
         bookingSection.setManaged(facility.isAvailable());
+
+        // Reset booking dates to today when facility changes
+        if (startDatePicker != null) {
+            startDatePicker.setValue(LocalDate.now());
+        }
+        if (endDatePicker != null) {
+            endDatePicker.setValue(LocalDate.now());
+        }
     }
 
     private void updateEquipmentList() {
@@ -289,6 +400,10 @@ public class FacilityDetailPage extends VBox {
     private String getBookingRules() {
         StringBuilder rules = new StringBuilder();
         rules.append("• Maximum booking duration: ").append(BookingPolicy.getMaxBookingHours()).append(" hours\n");
+        rules.append("• Minimum booking duration: ").append(BookingPolicy.getMinBookingMinutes()).append(" minutes\n");
+        rules.append("• Minimum advance booking: ").append(BookingPolicy.getMinAdvanceMinutes()).append(" minutes\n");
+        rules.append("• Maximum advance booking: ").append(BookingPolicy.getMaxAdvanceDays()).append(" days\n");
+        rules.append("• Maximum bookings per day: ").append(BookingPolicy.getMaxBookingsPerUserPerDay()).append("\n");
         rules.append("• Business hours: ").append(BookingPolicy.getBusinessHours()).append("\n");
         rules.append("• ").append(BookingPolicy.getCancellationPolicy()).append("\n");
 
@@ -299,33 +414,112 @@ public class FacilityDetailPage extends VBox {
         return rules.toString();
     }
 
-    private void handleBooking(DatePicker startDate, DatePicker endDate,
-                              ComboBox<String> startTime, ComboBox<String> endTime) {
-        if (facility == null) return;
+    private String validateBookingDetails(User user, Facility facility, LocalDateTime startTime, LocalDateTime endTime) {
+        // Check basic parameters
+        if (user == null || facility == null || startTime == null || endTime == null) {
+            return "Invalid booking parameters.";
+        }
 
-        LocalDate startDateValue = startDate.getValue();
-        LocalDate endDateValue = endDate.getValue();
-        String startTimeStr = startTime.getValue();
-        String endTimeStr = endTime.getValue();
+        // Check if facility is available
+        if (!facility.isAvailable()) {
+            return "Facility is not currently available.";
+        }
 
-        if (startDateValue == null || endDateValue == null || startTimeStr == null || endTimeStr == null) {
+        // Check privilege requirements
+        if (!BookingPolicy.hasRequiredPrivilege(user, facility)) {
+            return "You don't have permission to book this facility.";
+        }
+
+        // Check booking duration
+        if (!BookingPolicy.isValidDuration(startTime, endTime)) {
+            long minutes = java.time.Duration.between(startTime, endTime).toMinutes();
+            if (minutes < BookingPolicy.getMinBookingMinutes()) {
+                return "Booking duration is too short. Minimum duration is " + BookingPolicy.getMinBookingMinutes() + " minutes.";
+            } else if (minutes > BookingPolicy.getMaxBookingHours() * 60) {
+                return "Booking duration is too long. Maximum duration is " + BookingPolicy.getMaxBookingHours() + " hours.";
+            }
+            return "Invalid booking duration.";
+        }
+
+        // Check minimum advance booking time (30 minutes)
+        if (!BookingPolicy.hasMinimumAdvanceTime(startTime)) {
+            return "Bookings must be made at least 30 minutes in advance.";
+        }
+
+        // Check maximum advance booking time (14 days)
+        if (!BookingPolicy.isWithinAdvanceLimit(startTime)) {
+            return "Bookings cannot be made more than 14 days in advance.";
+        }
+
+        // Check user hasn't exceeded daily booking limit
+        if (!BookingPolicy.isWithinUserDailyLimit(user, startTime)) {
+            return "You have reached the maximum number of bookings allowed per day (" + BookingPolicy.getMaxBookingsPerUserPerDay() + ").";
+        }
+
+        // Check for overlapping bookings for this user
+        if (BookingPolicy.hasUserBookingConflict(user, startTime, endTime)) {
+            return "You already have a booking that conflicts with this time slot.";
+        }
+
+        // Check booking time is in the future
+        if (startTime.isBefore(LocalDateTime.now())) {
+            return "Booking start time must be in the future.";
+        }
+
+        // Check business hours
+        if (!BookingPolicy.isWithinBusinessHours(startTime, endTime)) {
+            return "Booking times must be within business hours (8:00 AM - 10:00 PM).";
+        }
+
+        return null; // No validation errors
+    }
+
+    private void handleBooking() {
+        if (facility == null) {
+            showAlert("No facility selected.");
+            return;
+        }
+
+        // Get selected dates and times
+        LocalDate startDate = startDatePicker.getValue();
+        LocalDate endDate = endDatePicker.getValue();
+        String startTimeStr = startTimeCombo.getValue();
+        String endTimeStr = endTimeCombo.getValue();
+
+        if (startDate == null || endDate == null || startTimeStr == null || endTimeStr == null) {
             showAlert("Please select both start and end date/time.");
             return;
         }
 
-        LocalDateTime startDateTime = LocalDateTime.of(startDateValue, LocalTime.parse(startTimeStr));
-        LocalDateTime endDateTime = LocalDateTime.of(endDateValue, LocalTime.parse(endTimeStr));
+        // Parse times
+        LocalTime startTime = LocalTime.parse(startTimeStr);
+        LocalTime endTime = LocalTime.parse(endTimeStr);
 
-        model.Booking booking = BookingService.createBooking(currentUser, facility, startDateTime, endDateTime);
+        LocalDateTime startDateTime = LocalDateTime.of(startDate, startTime);
+        LocalDateTime endDateTime = LocalDateTime.of(endDate, endTime);
 
+        // Validate booking details
+        String validationError = validateBookingDetails(currentUser, facility, startDateTime, endDateTime);
+        if (validationError != null) {
+            showAlert("Booking Error: " + validationError);
+            return;
+        }
+
+        // Attempt to create booking
+        Booking booking = BookingService.createBooking(currentUser, facility, startDateTime, endDateTime);
         if (booking != null) {
-            showAlert("Booking successful! Booking ID: " + booking.getBookingID());
-            // Navigate back to facilities or my bookings
+            showAlert("Booking created successfully!\n\n" +
+                     "Facility: " + facility.getName() + "\n" +
+                     "Date: " + startDateTime.toLocalDate() + "\n" +
+                     "Time: " + startTimeStr + " - " + endTimeStr + "\n\n" +
+                     "You can view your bookings in the 'My Bookings' section.");
+
+            // Navigate back to facilities page to refresh the status
             if (navigateCallback != null) {
-                navigateCallback.accept("my-bookings");
+                navigateCallback.accept("facilities");
             }
         } else {
-            showAlert("Booking failed. Please check availability and your eligibility.");
+            showAlert("Failed to create booking. Please try again or contact support.");
         }
     }
 
@@ -346,5 +540,47 @@ public class FacilityDetailPage extends VBox {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private String cleanFacilityName(String name, model.enums.FacilityType type) {
+        if (name == null) return "";
+
+        String cleanName = name.trim();
+
+        // Remove common redundant prefixes
+        cleanName = cleanName.replaceAll("(?i)^IIUM\\s+", "").trim();
+        cleanName = cleanName.replaceAll("(?i)^Library\\s+", "").trim();
+
+        // For facilities with parenthetical details, keep the core name + details
+        // but avoid redundancy with the type label below
+        String typeString = type.toString().replace("_", " ").toLowerCase();
+
+        // For CARREL_ROOM, if name contains "Carrel Room", just remove "Room" to avoid duplication
+        if (typeString.equals("carrel room") && cleanName.toLowerCase().contains("carrel room")) {
+            cleanName = cleanName.replaceAll("(?i)room", "").trim();
+        }
+        // For COMPUTER_LAB, if name contains "Computer Lab", just remove "Lab" to avoid duplication
+        else if (typeString.equals("computer lab") && cleanName.toLowerCase().contains("computer lab")) {
+            cleanName = cleanName.replaceAll("(?i)lab", "").trim();
+        }
+        // For DISCUSSION_ROOM, if name contains "Discussion Room", just remove "Room" to avoid duplication
+        else if (typeString.equals("discussion room") && cleanName.toLowerCase().contains("discussion room")) {
+            cleanName = cleanName.replaceAll("(?i)room", "").trim();
+        }
+        // For other room types, remove "Room" only if it's redundant with the type
+        else if (typeString.contains("room") && cleanName.toLowerCase().endsWith(" room")) {
+            cleanName = cleanName.substring(0, cleanName.length() - 5).trim();
+        }
+        // For areas, remove "Area" only if it's redundant with the type
+        else if (typeString.contains("area") && cleanName.toLowerCase().endsWith(" area")) {
+            cleanName = cleanName.substring(0, cleanName.length() - 5).trim();
+        }
+
+        // If the name becomes too short or empty, use the original
+        if (cleanName.length() < 2) {
+            return name;
+        }
+
+        return cleanName.trim();
     }
 }

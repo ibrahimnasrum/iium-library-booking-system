@@ -13,6 +13,14 @@ public class BookingPolicy {
 
     // Maximum booking duration in hours
     private static final int MAX_BOOKING_HOURS = 3;
+    // Minimum booking duration in minutes
+    private static final int MIN_BOOKING_MINUTES = 30;
+    // Minimum advance booking time in minutes
+    private static final int MIN_ADVANCE_MINUTES = 30;
+    // Maximum advance booking time in days
+    private static final int MAX_ADVANCE_DAYS = 14;
+    // Maximum bookings per user per day
+    private static final int MAX_BOOKINGS_PER_USER_PER_DAY = 3;
 
     /**
      * Check if a user can book a facility
@@ -37,7 +45,27 @@ public class BookingPolicy {
             return false;
         }
 
-        // Check booking time is in the future
+        // Check minimum advance booking time (30 minutes)
+        if (!hasMinimumAdvanceTime(startTime)) {
+            return false;
+        }
+
+        // Check maximum advance booking time (14 days)
+        if (!isWithinAdvanceLimit(startTime)) {
+            return false;
+        }
+
+        // Check user hasn't exceeded daily booking limit
+        if (!isWithinUserDailyLimit(user, startTime)) {
+            return false;
+        }
+
+        // Check for overlapping bookings for this user
+        if (hasUserBookingConflict(user, startTime, endTime)) {
+            return false;
+        }
+
+        // Check booking time is in the future (allow same day if time is still ahead)
         if (startTime.isBefore(LocalDateTime.now())) {
             return false;
         }
@@ -53,7 +81,7 @@ public class BookingPolicy {
     /**
      * Check if user has required privilege for the facility
      */
-    private static boolean hasRequiredPrivilege(User user, Facility facility) {
+    public static boolean hasRequiredPrivilege(User user, Facility facility) {
         ReservationPrivilege required = facility.getPrivilege();
 
         switch (required) {
@@ -67,8 +95,7 @@ public class BookingPolicy {
                 return user.getRole() == Role.STAFF || user.getRole() == Role.ADMIN;
 
             case POSTGRADUATE_ONLY:
-                // For demo, assume postgraduate students have matric numbers starting with certain patterns
-                return user.getMatricNo().startsWith("9") || user.getMatricNo().startsWith("8");
+                return user.getRole() == Role.POSTGRADUATE;
 
             case SPECIAL_NEEDS_ONLY:
                 // Would need additional user profile information
@@ -89,19 +116,88 @@ public class BookingPolicy {
     /**
      * Check if booking duration is valid
      */
-    private static boolean isValidDuration(LocalDateTime startTime, LocalDateTime endTime) {
+    public static boolean isValidDuration(LocalDateTime startTime, LocalDateTime endTime) {
         if (startTime.isAfter(endTime)) {
             return false;
         }
 
         long hours = Duration.between(startTime, endTime).toHours();
-        return hours > 0 && hours <= MAX_BOOKING_HOURS;
+        long minutes = Duration.between(startTime, endTime).toMinutes();
+
+        return minutes >= MIN_BOOKING_MINUTES && hours <= MAX_BOOKING_HOURS;
+    }
+
+    /**
+     * Check if booking has minimum advance time (30 minutes)
+     */
+    public static boolean hasMinimumAdvanceTime(LocalDateTime startTime) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime minimumStartTime = now.plusMinutes(MIN_ADVANCE_MINUTES);
+
+        return startTime.isAfter(minimumStartTime) || startTime.isEqual(minimumStartTime);
+    }
+
+    /**
+     * Check if booking is within maximum advance limit (14 days)
+     */
+    public static boolean isWithinAdvanceLimit(LocalDateTime startTime) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime maxAdvanceTime = now.plusDays(MAX_ADVANCE_DAYS);
+
+        return startTime.isBefore(maxAdvanceTime) || startTime.toLocalDate().equals(maxAdvanceTime.toLocalDate());
+    }
+
+    /**
+     * Check if user is within daily booking limit
+     */
+    public static boolean isWithinUserDailyLimit(User user, LocalDateTime startTime) {
+        if (user == null) return false;
+
+        // Count user's bookings for the same day
+        long bookingsToday = user.getMyBookings().stream()
+            .filter(booking -> booking.getStatus() == model.enums.BookingStatus.ACTIVE)
+            .filter(booking -> booking.getStartTime().toLocalDate().equals(startTime.toLocalDate()))
+            .count();
+
+        return bookingsToday < MAX_BOOKINGS_PER_USER_PER_DAY;
+    }
+
+    /**
+     * Check if user has overlapping bookings
+     */
+    public static boolean hasUserBookingConflict(User user, LocalDateTime startTime, LocalDateTime endTime) {
+        if (user == null) return false;
+
+        return user.getMyBookings().stream()
+            .filter(booking -> booking.getStatus() == model.enums.BookingStatus.ACTIVE)
+            .anyMatch(booking ->
+                // Check for time overlap
+                (startTime.isBefore(booking.getEndTime()) && endTime.isAfter(booking.getStartTime()))
+            );
+    }
+
+    /**
+     * Check if a user can potentially book a facility (ignoring time constraints)
+     * Used for UI filtering to show only bookable facilities
+     */
+    public static boolean canUserBookFacility(User user, Facility facility) {
+        if (user == null || facility == null) {
+            return false;
+        }
+
+        // Check if facility is available
+        if (!facility.isAvailable()) {
+            return false;
+        }
+
+        // Check privilege requirements
+        return hasRequiredPrivilege(user, facility);
     }
 
     /**
      * Check if booking time is within business hours
      */
-    private static boolean isWithinBusinessHours(LocalDateTime startTime, LocalDateTime endTime) {
+    public static boolean isWithinBusinessHours(LocalDateTime startTime, LocalDateTime endTime) {
         int startHour = startTime.getHour();
         int endHour = endTime.getHour();
 
@@ -118,6 +214,34 @@ public class BookingPolicy {
      */
     public static int getMaxBookingHours() {
         return MAX_BOOKING_HOURS;
+    }
+
+    /**
+     * Get minimum booking duration in minutes
+     */
+    public static int getMinBookingMinutes() {
+        return MIN_BOOKING_MINUTES;
+    }
+
+    /**
+     * Get minimum advance booking time in minutes
+     */
+    public static int getMinAdvanceMinutes() {
+        return MIN_ADVANCE_MINUTES;
+    }
+
+    /**
+     * Get maximum advance booking time in days
+     */
+    public static int getMaxAdvanceDays() {
+        return MAX_ADVANCE_DAYS;
+    }
+
+    /**
+     * Get maximum bookings per user per day
+     */
+    public static int getMaxBookingsPerUserPerDay() {
+        return MAX_BOOKINGS_PER_USER_PER_DAY;
     }
 
     /**

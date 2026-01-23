@@ -7,6 +7,7 @@ import model.User;
 import model.enums.FacilityStatus;
 import model.enums.FacilityType;
 import model.enums.ReservationPrivilege;
+import model.enums.Role;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
@@ -61,12 +62,55 @@ public class FacilityService {
     }
 
     /**
-     * Get available facilities for booking
+     * Get facilities accessible by a specific user based on their role
      */
-    public static List<Facility> getAvailableFacilities() {
+    public static List<Facility> getAccessibleFacilities(User user) {
+        if (user == null) {
+            return new ArrayList<>();
+        }
+
         return facilities.stream()
-                .filter(Facility::isAvailable)
+                .filter(facility -> canAccessFacility(user, facility))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Check if a user can access a specific facility
+     */
+    public static boolean canAccessFacility(User user, Facility facility) {
+        if (user == null || facility == null) {
+            return false;
+        }
+
+        // Admins can access all facilities
+        if (user.getRole() == Role.ADMIN) {
+            return true;
+        }
+
+        // Check facility privilege requirements
+        ReservationPrivilege required = facility.getPrivilege();
+        switch (required) {
+            case OPEN:
+                return true; // Anyone can access
+
+            case STUDENT_ONLY:
+                return user.getRole() == Role.STUDENT;
+
+            case STAFF_ONLY:
+                return user.getRole() == Role.STAFF || user.getRole() == Role.ADMIN;
+
+            case POSTGRADUATE_ONLY:
+                return user.getRole() == Role.POSTGRADUATE;
+
+            case SPECIAL_NEEDS_ONLY:
+            case BOOK_VENDORS_ONLY:
+            case LIBRARY_USE_ONLY:
+                // These require special permissions, currently only admins
+                return user.getRole() == Role.ADMIN;
+
+            default:
+                return false;
+        }
     }
 
     /**

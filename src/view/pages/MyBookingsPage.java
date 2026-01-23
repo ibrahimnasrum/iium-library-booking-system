@@ -20,6 +20,7 @@ public class MyBookingsPage extends VBox {
 
     private User currentUser;
     private ObservableList<Booking> bookingsList;
+    private Runnable refreshFacilitiesCallback;
 
     // UI Components
     private TableView<Booking> bookingsTable;
@@ -29,7 +30,12 @@ public class MyBookingsPage extends VBox {
     private TextArea bookingDetailsArea;
 
     public MyBookingsPage(User user) {
+        this(user, null);
+    }
+
+    public MyBookingsPage(User user, Runnable refreshFacilitiesCallback) {
         this.currentUser = user;
+        this.refreshFacilitiesCallback = refreshFacilitiesCallback;
         initializeComponents();
         setupLayout();
         loadData();
@@ -255,6 +261,10 @@ public class MyBookingsPage extends VBox {
                     showToast("✅ Booking cancelled successfully.", "success");
                     loadData(); // Refresh data
                     bookingDetailsArea.clear();
+                    // Refresh facilities page to update status
+                    if (refreshFacilitiesCallback != null) {
+                        refreshFacilitiesCallback.run();
+                    }
                 } else {
                     showToast("❌ Cancellation failed. Check booking ownership.", "error");
                 }

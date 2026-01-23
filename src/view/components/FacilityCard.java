@@ -23,15 +23,15 @@ public class FacilityCard extends VBox {
     }
 
     private void setupCard() {
-        setPrefSize(180, 140); // Increased height from 120 to 140 to accommodate status
+        setPrefSize(180, 160); // Reverted to original size for better screen density
         setAlignment(Pos.CENTER); // Center the content in the StackPane
 
         // Create content VBox
-        contentBox = new VBox(4); // Reduced spacing from 8 to 4
-        contentBox.setSpacing(4);
+        contentBox = new VBox(3); // Reduced spacing from 4 to 3 for better fit
+        contentBox.setSpacing(3);
         contentBox.setPadding(new Insets(10)); // Reduced padding from 15 to 10
         contentBox.setAlignment(Pos.TOP_CENTER);
-        contentBox.setPrefSize(180, 140); // Make sure it fills the entire card
+        contentBox.setPrefSize(180, 160); // Make sure it fills the entire card
 
         // Add colorful background based on facility type with very thin black outline and enhanced shadow
         String backgroundColor = getFacilityTypeColor(facility.getType());
@@ -42,24 +42,38 @@ public class FacilityCard extends VBox {
         iconLabel.setStyle("-fx-font-size: 24px; -fx-text-fill: #000000; -fx-font-weight: bold;");
         iconLabel.setAlignment(Pos.CENTER);
 
-        // Facility name (centered, black text, better typography)
-        Label nameLabel = new Label(facility.getName());
-        nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #000000; -fx-text-alignment: center;");
+        // Facility name (centered, black text, better typography) - remove redundant type info
+        String displayName = cleanFacilityName(facility.getName(), facility.getType()).toUpperCase();
+        Label nameLabel = new Label(displayName);
+        nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #000000; -fx-text-alignment: center;");
         nameLabel.setWrapText(true);
-        nameLabel.setMaxWidth(150);
+        nameLabel.setMaxWidth(160); // Reverted to original width for compact display
+        nameLabel.setPrefHeight(Label.USE_COMPUTED_SIZE);
 
-        // Facility type (smaller, dark gray text)
-        Label typeLabel = new Label(facility.getType().toString().replace("_", " "));
-        typeLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #000000; -fx-text-alignment: center; -fx-font-style: italic; -fx-font-weight: bold;");
-        typeLabel.setWrapText(true);
-        typeLabel.setMaxWidth(150);
+        // Level information
+        Label levelLabel = new Label("📍 " + facility.getLocation());
+        levelLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #e74c3c; -fx-text-alignment: center; -fx-font-weight: bold;");
+        levelLabel.setWrapText(true);
+        levelLabel.setMaxWidth(160); // Reverted to original width for compact display
+
+        // Privilege badge (show only if not OPEN)
+        Label privilegeLabel = null;
+        if (facility.getPrivilege() != ReservationPrivilege.OPEN) {
+            privilegeLabel = new Label(getPrivilegeDisplayText(facility.getPrivilege()));
+            privilegeLabel.getStyleClass().add(getPrivilegeBadgeClass(facility.getPrivilege()));
+            privilegeLabel.setStyle(privilegeLabel.getStyle() + "; -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 4 8; -fx-background-radius: 15; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 3, 0.3, 0, 1);");
+        }
 
         // Status badge - positioned at bottom center
         Label statusLabel = new Label(getStatusDisplayText(facility.getStatus()));
         statusLabel.getStyleClass().add(getStatusBadgeClass(facility.getStatus()));
-        statusLabel.setStyle(statusLabel.getStyle() + "; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0.5, 0, 1);");
+        statusLabel.setStyle(statusLabel.getStyle() + "; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, " + getStatusGlowColor(facility.getStatus()) + ", 8, 0.8, 0, 0), dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0.5, 0, 1);");
 
-        contentBox.getChildren().addAll(iconLabel, nameLabel, typeLabel, statusLabel);
+        if (privilegeLabel != null) {
+            contentBox.getChildren().addAll(iconLabel, nameLabel, levelLabel, privilegeLabel, statusLabel);
+        } else {
+            contentBox.getChildren().addAll(iconLabel, nameLabel, levelLabel, statusLabel);
+        }
 
         // Add the content box to the VBox
         getChildren().add(contentBox);
@@ -74,14 +88,14 @@ public class FacilityCard extends VBox {
         setOnMouseExited(e -> contentBox.setStyle("-fx-background-color: " + backgroundColor + "; -fx-background-radius: 15; -fx-border-color: #000000; -fx-border-width: 0.5; -fx-border-radius: 15; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 12, 0.4, 0, 6);"));
     }
 
-    private String getStatusColor(FacilityStatus status) {
+    private String getStatusGlowColor(model.enums.FacilityStatus status) {
         switch (status) {
-            case AVAILABLE: return "#27ae60"; // Green
-            case BOOKED: return "#e74c3c"; // Red
-            case MAINTENANCE: return "#f39c12"; // Orange
-            case TEMPORARILY_CLOSED: return "#95a5a6"; // Gray
-            case RESERVED: return "#9b59b6"; // Purple
-            default: return "#95a5a6"; // Gray
+            case AVAILABLE: return "#27ae60"; // Green glow
+            case BOOKED: return "#e74c3c"; // Red glow
+            case MAINTENANCE: return "#f39c12"; // Orange glow
+            case TEMPORARILY_CLOSED: return "#95a5a6"; // Gray glow
+            case RESERVED: return "#9b59b6"; // Purple glow
+            default: return "#95a5a6"; // Gray glow
         }
     }
 
@@ -109,14 +123,15 @@ public class FacilityCard extends VBox {
         }
     }
 
-    private String getStatusDisplayText(model.enums.FacilityStatus status) {
-        switch (status) {
-            case AVAILABLE: return "✓ AVAILABLE";
-            case BOOKED: return "🔒 BOOKED";
-            case TEMPORARILY_CLOSED: return "⛔ CLOSED";
-            case MAINTENANCE: return "🔧 MAINTENANCE";
-            case RESERVED: return "📅 RESERVED";
-            default: return "❓ UNKNOWN";
+    private String getPrivilegeDisplayText(ReservationPrivilege privilege) {
+        switch (privilege) {
+            case STUDENT_ONLY: return "👨‍🎓 STUDENTS";
+            case STAFF_ONLY: return "👔 STAFF";
+            case POSTGRADUATE_ONLY: return "🎓 POSTGRAD";
+            case SPECIAL_NEEDS_ONLY: return "♿ ACCESSIBLE";
+            case BOOK_VENDORS_ONLY: return "📚 VENDORS";
+            case LIBRARY_USE_ONLY: return "🏛️ LIBRARY";
+            default: return "";
         }
     }
 
@@ -135,13 +150,66 @@ public class FacilityCard extends VBox {
                 // Clear existing style classes and add the new one
                 statusLabel.getStyleClass().clear();
                 statusLabel.getStyleClass().add(getStatusBadgeClass(newStatus));
-                statusLabel.setStyle(statusLabel.getStyle() + "; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0.5, 0, 1);");
+                statusLabel.setStyle(statusLabel.getStyleClass().toString() + "; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, " + getStatusGlowColor(newStatus) + ", 8, 0.8, 0, 0), dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0.5, 0, 1);");
             }
         }
     }
 
     public void setOnCardClicked(Runnable handler) {
         this.onCardClicked = handler;
+    }
+
+    private String cleanFacilityName(String name, model.enums.FacilityType type) {
+        if (name == null) return "";
+
+        String cleanName = name.trim();
+
+        // Remove common redundant prefixes
+        cleanName = cleanName.replaceAll("(?i)^IIUM\\s+", "").trim();
+        cleanName = cleanName.replaceAll("(?i)^Library\\s+", "").trim();
+
+        // For facilities with parenthetical details, keep the core name + details
+        // but avoid redundancy with the type label below
+        String typeString = type.toString().replace("_", " ").toLowerCase();
+
+        // For CARREL_ROOM, if name contains "Carrel Room", just remove "Room" to avoid duplication
+        if (typeString.equals("carrel room") && cleanName.toLowerCase().contains("carrel room")) {
+            cleanName = cleanName.replaceAll("(?i)room", "").trim();
+        }
+        // For COMPUTER_LAB, if name contains "Computer Lab", just remove "Lab" to avoid duplication
+        else if (typeString.equals("computer lab") && cleanName.toLowerCase().contains("computer lab")) {
+            cleanName = cleanName.replaceAll("(?i)lab", "").trim();
+        }
+        // For DISCUSSION_ROOM, if name contains "Discussion Room", just remove "Room" to avoid duplication
+        else if (typeString.equals("discussion room") && cleanName.toLowerCase().contains("discussion room")) {
+            cleanName = cleanName.replaceAll("(?i)room", "").trim();
+        }
+        // For other room types, remove "Room" only if it's redundant with the type
+        else if (typeString.contains("room") && cleanName.toLowerCase().endsWith(" room")) {
+            cleanName = cleanName.substring(0, cleanName.length() - 5).trim();
+        }
+        // For areas, remove "Area" only if it's redundant with the type
+        else if (typeString.contains("area") && cleanName.toLowerCase().endsWith(" area")) {
+            cleanName = cleanName.substring(0, cleanName.length() - 5).trim();
+        }
+
+        // If the name becomes too short or empty, use the original
+        if (cleanName.length() < 2) {
+            return name;
+        }
+
+        return cleanName.trim();
+    }
+
+    private String getStatusDisplayText(model.enums.FacilityStatus status) {
+        switch (status) {
+            case AVAILABLE: return "✓ AVAILABLE";
+            case BOOKED: return "🔒 BOOKED";
+            case TEMPORARILY_CLOSED: return "⛔ CLOSED";
+            case MAINTENANCE: return "🔧 MAINTENANCE";
+            case RESERVED: return "📅 RESERVED";
+            default: return "❓ UNKNOWN";
+        }
     }
 
     private String getFacilityIcon(model.enums.FacilityType type) {

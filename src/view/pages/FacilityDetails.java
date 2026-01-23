@@ -31,7 +31,6 @@ public class FacilityDetails extends VBox {
     private ImageView facilityImage;
     private Label nameLabel;
     private Label idLabel;
-    private Label typeLabel;
     private Label locationLabel;
     private Label capacityLabel;
     private Label statusLabel;
@@ -59,9 +58,6 @@ public class FacilityDetails extends VBox {
 
         idLabel = new Label();
         idLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 14px;");
-
-        typeLabel = new Label();
-        typeLabel.setStyle("-fx-font-size: 16px;");
 
         locationLabel = new Label();
         locationLabel.setStyle("-fx-font-size: 16px;");
@@ -165,16 +161,14 @@ public class FacilityDetails extends VBox {
         infoGrid.setHgap(15);
         infoGrid.setVgap(10);
 
-        infoGrid.add(new Label("Type:"), 0, 0);
-        infoGrid.add(typeLabel, 1, 0);
-        infoGrid.add(new Label("Location:"), 0, 1);
-        infoGrid.add(locationLabel, 1, 1);
-        infoGrid.add(new Label("Capacity:"), 0, 2);
-        infoGrid.add(capacityLabel, 1, 2);
-        infoGrid.add(new Label("Status:"), 0, 3);
-        infoGrid.add(statusLabel, 1, 3);
-        infoGrid.add(new Label("Access:"), 0, 4);
-        infoGrid.add(privilegeLabel, 1, 4);
+        infoGrid.add(new Label("Location:"), 0, 0);
+        infoGrid.add(locationLabel, 1, 0);
+        infoGrid.add(new Label("Capacity:"), 0, 1);
+        infoGrid.add(capacityLabel, 1, 1);
+        infoGrid.add(new Label("Status:"), 0, 2);
+        infoGrid.add(statusLabel, 1, 2);
+        infoGrid.add(new Label("Access:"), 0, 3);
+        infoGrid.add(privilegeLabel, 1, 3);
 
         // Equipment section
         VBox equipmentSection = new VBox(10);
@@ -235,7 +229,6 @@ public class FacilityDetails extends VBox {
         // Update labels
         nameLabel.setText(facility.getName());
         idLabel.setText("ID: " + facility.getId());
-        typeLabel.setText(facility.getType().toString());
         locationLabel.setText(facility.getLocation());
         capacityLabel.setText(String.valueOf(facility.getCapacity()));
 

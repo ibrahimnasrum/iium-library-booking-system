@@ -7,6 +7,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.Priority;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
@@ -14,6 +16,7 @@ import javafx.scene.text.FontWeight;
 import model.Facility;
 import model.User;
 import model.services.FacilityService;
+import model.services.BookingPolicy;
 import view.components.FacilityCard;
 
 import java.util.List;
@@ -33,9 +36,7 @@ public class FacilitiesPage extends VBox {
     private ScrollPane facilitiesScrollPane;
     private FlowPane facilitiesContainer;
     private TextField searchField;
-    private ComboBox<String> filterTypeCombo;
     private ComboBox<String> filterLocationCombo;
-    private ComboBox<String> filterStatusCombo;
 
     // Store facility cards for dynamic updates
     private Map<Facility, FacilityCard> facilityCardMap;
@@ -61,28 +62,17 @@ public class FacilitiesPage extends VBox {
         searchField.setStyle("-fx-font-size: 14px; -fx-padding: 8;");
         searchField.textProperty().addListener((obs, oldText, newText) -> filterFacilities());
 
-        filterTypeCombo = new ComboBox<>();
-        filterTypeCombo.getItems().addAll("All Types", "Room", "Study Area", "Computer Lab", "Auditorium", "Discussion Room");
-        filterTypeCombo.setValue("All Types");
-        filterTypeCombo.setStyle("-fx-font-size: 14px;");
-        filterTypeCombo.setOnAction(e -> filterFacilities());
-
         filterLocationCombo = new ComboBox<>();
         filterLocationCombo.getItems().addAll("All Locations", "Level 1", "Level 2", "Level 3");
         filterLocationCombo.setValue("All Locations");
         filterLocationCombo.setStyle("-fx-font-size: 14px;");
         filterLocationCombo.setOnAction(e -> filterFacilities());
-
-        filterStatusCombo = new ComboBox<>();
-        filterStatusCombo.getItems().addAll("All Status", "Available", "Booked");
-        filterStatusCombo.setValue("All Status");
-        filterStatusCombo.setStyle("-fx-font-size: 14px;");
-        filterStatusCombo.setOnAction(e -> filterFacilities());
     }
 
     private void setupLayout() {
         setSpacing(20);
         setPadding(new Insets(30));
+        setMaxWidth(Double.MAX_VALUE);
         setStyle("-fx-background-color: linear-gradient(to bottom right, #e3f2fd 0%, #f3e5f5 25%, #fff3e0 50%, #e8f5e8 75%, #fce4ec 100%); -fx-background-radius: 0;");
 
         // Header
@@ -102,15 +92,29 @@ public class FacilitiesPage extends VBox {
         header.setAlignment(Pos.CENTER);
         header.setPadding(new Insets(0, 0, 20, 0));
 
+        // Header with title and refresh button
+        HBox titleBox = new HBox(20);
+        titleBox.setAlignment(Pos.CENTER_LEFT);
+        titleBox.setMaxWidth(Double.MAX_VALUE);
+
         Label titleLabel = new Label("🏢 Browse Facilities");
         titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 28));
         titleLabel.setStyle("-fx-text-fill: #2c3e50;");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button refreshButton = new Button("🔄 Refresh Status");
+        refreshButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 6 10; -fx-background-radius: 6;");
+        refreshButton.setOnAction(e -> refreshFacilityStatuses());
+
+        titleBox.getChildren().addAll(titleLabel, spacer, refreshButton);
 
         Label subtitleLabel = new Label("Find and explore available facilities for booking");
         subtitleLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
         subtitleLabel.setStyle("-fx-text-fill: #7f8c8d;");
 
-        header.getChildren().addAll(titleLabel, subtitleLabel);
+        header.getChildren().addAll(titleBox, subtitleLabel);
         return header;
     }
 
@@ -132,9 +136,7 @@ public class FacilitiesPage extends VBox {
         HBox filterRow = new HBox(15);
         filterRow.setAlignment(Pos.CENTER_LEFT);
         filterRow.getChildren().addAll(
-            new Label("Type:"), filterTypeCombo,
-            new Label("Location:"), filterLocationCombo,
-            new Label("Status:"), filterStatusCombo
+            new Label("Location:"), filterLocationCombo
         );
 
         searchBox.getChildren().addAll(searchTitle, searchRow, filterRow);
@@ -143,10 +145,19 @@ public class FacilitiesPage extends VBox {
 
     private VBox createFacilitiesSection() {
         VBox facilitiesBox = new VBox(15);
+        facilitiesBox.setMaxWidth(Double.MAX_VALUE);
+
+        HBox facilitiesTitleRow = new HBox(10);
+        facilitiesTitleRow.setAlignment(Pos.CENTER_LEFT);
+        facilitiesTitleRow.setMaxWidth(Double.MAX_VALUE);
 
         Label facilitiesTitle = new Label("📋 Available Facilities");
         facilitiesTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
         facilitiesTitle.setStyle("-fx-text-fill: #2c3e50;");
+
+        facilitiesTitleRow.getChildren().addAll(facilitiesTitle);
+        // Ensure title row spans full width so right-aligned button is visible
+        facilitiesTitleRow.prefWidthProperty().bind(facilitiesBox.widthProperty());
 
         // Facilities container
         facilitiesContainer = new FlowPane();
@@ -160,7 +171,7 @@ public class FacilitiesPage extends VBox {
         facilitiesScrollPane.setPrefHeight(500);
         facilitiesScrollPane.setStyle("-fx-background-color: transparent; -fx-border-color: #dee2e6; -fx-border-radius: 12; -fx-background-radius: 12;");
 
-        facilitiesBox.getChildren().addAll(facilitiesTitle, facilitiesScrollPane);
+        facilitiesBox.getChildren().addAll(facilitiesTitleRow, facilitiesScrollPane);
         return facilitiesBox;
     }
 
@@ -186,18 +197,18 @@ public class FacilitiesPage extends VBox {
     }
 
     private void loadData() {
-        // Load facilities
-        List<Facility> facilities = FacilityService.getAllFacilities();
+        // Load facilities accessible by current user
+        List<Facility> facilities = FacilityService.getAccessibleFacilities(currentUser);
         facilitiesList.clear();
         facilitiesList.addAll(facilities);
         filterFacilities();
     }
 
     public void refreshFacilityStatuses() {
-        // Reload facilities data
-        List<Facility> updatedFacilities = FacilityService.getAllFacilities();
+        // Reload facilities data that user can access
+        List<Facility> updatedFacilities = FacilityService.getAccessibleFacilities(currentUser);
 
-        // Update each facility and its corresponding card
+        // Update existing facilities and their cards
         for (Facility updatedFacility : updatedFacilities) {
             FacilityCard card = facilityCardMap.get(updatedFacility);
             if (card != null) {
@@ -206,8 +217,13 @@ public class FacilitiesPage extends VBox {
             }
         }
 
-        // Refresh the filtered list
-        filterFacilities();
+        // Reload the full list in case accessibility changed
+        loadData();
+    }
+
+    private void refreshFacilities() {
+        // Reload all facility data from service
+        loadData();
     }
 
     private void filterFacilities() {
@@ -215,12 +231,9 @@ public class FacilitiesPage extends VBox {
             .filter(f -> searchField.getText().isEmpty() ||
                         f.getName().toLowerCase().contains(searchField.getText().toLowerCase()) ||
                         f.getId().toLowerCase().contains(searchField.getText().toLowerCase()))
-            .filter(f -> filterTypeCombo.getValue().equals("All Types") ||
-                        f.getType().toString().contains(filterTypeCombo.getValue()))
             .filter(f -> filterLocationCombo.getValue().equals("All Locations") ||
                         f.getLocation().contains(filterLocationCombo.getValue()))
-            .filter(f -> filterStatusCombo.getValue().equals("All Status") ||
-                        f.getStatus().toString().equalsIgnoreCase(filterStatusCombo.getValue()))
+            .filter(f -> BookingPolicy.canUserBookFacility(currentUser, f)) // Only show facilities user can book
             .collect(Collectors.toList());
 
         filteredFacilitiesList.clear();

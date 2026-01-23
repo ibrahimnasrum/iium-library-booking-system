@@ -6,14 +6,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class User {
+    private String userId;
     private String matricNo;
     private String password;
     private String name;
     private Role role;
     private List<Booking> myBookings;
     private static List<Room> allRooms = new ArrayList<>();
+    private static int userCounter = 1;
 
     public User(String matricNo, String password, String name, Role role) {
+        this.userId = "U" + String.format("%04d", userCounter++);
         this.matricNo = matricNo;
         this.password = password;
         this.name = name;
@@ -139,8 +142,16 @@ public class User {
     }
 
     // Getters
+    public String getUserId() {
+        return userId;
+    }
+
     public String getMatricNo() {
         return matricNo;
+    }
+
+    public String getPassword() {
+        return password;
     }
 
     public String getName() {

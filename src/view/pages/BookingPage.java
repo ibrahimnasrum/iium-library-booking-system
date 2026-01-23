@@ -11,6 +11,7 @@ import model.Booking;
 import model.Facility;
 import model.User;
 import model.services.BookingService;
+import model.services.BookingPolicy;
 import model.services.FacilityService;
 
 import java.time.LocalDate;
@@ -248,8 +249,9 @@ public class BookingPage extends VBox {
         facilityCombo.getItems().clear();
 
         for (Facility facility : facilities) {
-            // Only show available facilities
-            if (facility.getStatus().toString().equals("AVAILABLE")) {
+            // Only show available facilities that user can book
+            if (facility.getStatus().toString().equals("AVAILABLE") &&
+                BookingPolicy.canUserBookFacility(currentUser, facility)) {
                 facilityCombo.getItems().add(facility.getId() + " - " + facility.getName());
             }
         }

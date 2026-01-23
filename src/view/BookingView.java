@@ -37,7 +37,6 @@ public class BookingView extends Application {
     // UI Components
     private TableView<Room> roomsTable;
     private TextField searchField;
-    private ComboBox<String> filterTypeCombo;
     private ComboBox<String> filterLocationCombo;
     private ComboBox<String> filterEligibilityCombo;
     private DatePicker startDatePicker;
@@ -128,16 +127,6 @@ public class BookingView extends Application {
         HBox filterBox1 = new HBox(10);
         filterBox1.setAlignment(Pos.CENTER_LEFT);
         
-        Label typeLabel = new Label("Type:");
-        typeLabel.setFont(Font.font("Arial", FontWeight.SEMI_BOLD, 11));
-        filterTypeCombo = new ComboBox<>();
-        filterTypeCombo.getItems().addAll("All Types", "Student Lounge", "Carrel Room", "Discussion Room", 
-            "Research Room", "Viewing Room", "Exhibition Area", "Computer Lab", "Multi Purpose Room", 
-            "MBSB AZKA-PPZ Corner", "Library Auditorium");
-        filterTypeCombo.setValue("All Types");
-        filterTypeCombo.setPrefWidth(180);
-        filterTypeCombo.setOnAction(e -> applyFilters());
-        
         Label locationLabel = new Label("Location:");
         locationLabel.setFont(Font.font("Arial", FontWeight.SEMI_BOLD, 11));
         filterLocationCombo = new ComboBox<>();
@@ -146,7 +135,7 @@ public class BookingView extends Application {
         filterLocationCombo.setPrefWidth(130);
         filterLocationCombo.setOnAction(e -> applyFilters());
         
-        filterBox1.getChildren().addAll(typeLabel, filterTypeCombo, locationLabel, filterLocationCombo);
+        filterBox1.getChildren().addAll(locationLabel, filterLocationCombo);
 
         HBox filterBox2 = new HBox(10);
         filterBox2.setAlignment(Pos.CENTER_LEFT);
@@ -452,7 +441,6 @@ public class BookingView extends Application {
 
     private void applyFilters() {
         String searchText = searchField.getText().toLowerCase();
-        String typeFilter = filterTypeCombo.getValue();
         String locationFilter = filterLocationCombo.getValue();
         String eligibilityFilter = filterEligibilityCombo.getValue();
 
@@ -464,10 +452,6 @@ public class BookingView extends Application {
                     room.getType().toString().toLowerCase().contains(searchText) ||
                     room.getLocation().toLowerCase().contains(searchText);
 
-                // Type filter
-                boolean matchesType = typeFilter.equals("All Types") ||
-                    room.getType().toString().contains(typeFilter);
-
                 // Location filter
                 boolean matchesLocation = locationFilter.equals("All Locations") || 
                     room.getLocation().contains(locationFilter);
@@ -476,7 +460,7 @@ public class BookingView extends Application {
                 boolean matchesEligibility = eligibilityFilter.equals("All") || 
                     room.getEligibility().equals(eligibilityFilter);
 
-                return matchesSearch && matchesType && matchesLocation && matchesEligibility;
+                return matchesSearch && matchesLocation && matchesEligibility;
             })
             .collect(Collectors.toList());
 
@@ -495,7 +479,6 @@ public class BookingView extends Application {
     private void showAllRooms() {
         filteredRoomsList.setAll(roomsList);
         searchField.clear();
-        filterTypeCombo.setValue("All Types");
         filterLocationCombo.setValue("All Locations");
         filterEligibilityCombo.setValue("All");
         showStatus("Showing all " + roomsList.size() + " rooms", "#3498db");

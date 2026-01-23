@@ -9,6 +9,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import model.User;
 import model.services.AuthService;
+import view.pages.LoginPage;
 
 public class MainApplication extends Application {
 
@@ -18,23 +19,31 @@ public class MainApplication extends Application {
     @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
+        primaryStage.setTitle("IIUM Library Booking System");
 
-        // Auto-login as admin for testing
-        currentUser = AuthService.login("1123456", "password");
+        // Show login screen as the first layer
+        showLoginPage();
+    }
 
-        if (currentUser != null) {
-            showMainLayout();
-        } else {
-            showLoginFailed();
-        }
+    private void showLoginPage() {
+        LoginPage loginPage = new LoginPage(this::onLoginSuccess);
+
+        Scene scene = new Scene(loginPage, 1000, 700);
+        primaryStage.setScene(scene);
+        primaryStage.show();
+    }
+
+    private void onLoginSuccess(User user) {
+        this.currentUser = user;
+        showMainLayout();
     }
 
     private void showMainLayout() {
         // Create the main layout with navigation
-        MainLayout mainLayout = new MainLayout(currentUser);
+        MainLayout mainLayout = new MainLayout(currentUser, this::showLoginPage);
 
         Scene scene = new Scene(mainLayout, 1400, 900);
-        // scene.getStylesheets().add(getClass().getResource("/styles/theme.css").toExternalForm());
+        scene.getStylesheets().add(getClass().getResource("/styles/theme.css").toExternalForm());
         primaryStage.setTitle("IIUM Library Booking System - " + currentUser.getName());
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -49,7 +58,7 @@ public class MainApplication extends Application {
         label.setStyle("-fx-font-size: 16px; -fx-text-fill: red;");
 
         Button retryBtn = new Button("Retry");
-        retryBtn.setOnAction(e -> start(primaryStage));
+        retryBtn.setOnAction(e -> showLoginPage());
 
         root.getChildren().addAll(label, retryBtn);
 

@@ -15,6 +15,7 @@ import model.Facility;
 import model.Room;
 import model.User;
 import model.services.BookingService;
+import model.services.BookingPolicy;
 import model.services.FacilityService;
 import view.components.FacilityCard;
 
@@ -35,9 +36,7 @@ public class StudentDashboard extends VBox {
     private ScrollPane facilitiesScrollPane;
     private FlowPane facilitiesContainer;
     private TextField searchField;
-    private ComboBox<String> filterTypeCombo;
     private ComboBox<String> filterLocationCombo;
-    private ComboBox<String> filterStatusCombo;
     private DatePicker startDatePicker;
     private DatePicker endDatePicker;
     private ComboBox<String> startTimeCombo;
@@ -67,20 +66,10 @@ public class StudentDashboard extends VBox {
         searchField.setPromptText("Search facilities...");
         searchField.textProperty().addListener((obs, oldText, newText) -> filterFacilities());
 
-        filterTypeCombo = new ComboBox<>();
-        filterTypeCombo.getItems().addAll("All Types", "Room", "Study Area", "Computer Lab", "Auditorium", "Discussion Room");
-        filterTypeCombo.setValue("All Types");
-        filterTypeCombo.setOnAction(e -> filterFacilities());
-
         filterLocationCombo = new ComboBox<>();
         filterLocationCombo.getItems().addAll("All Locations", "Level 1", "Level 2", "Level 3");
         filterLocationCombo.setValue("All Locations");
         filterLocationCombo.setOnAction(e -> filterFacilities());
-
-        filterStatusCombo = new ComboBox<>();
-        filterStatusCombo.getItems().addAll("All Status", "Available", "Booked");
-        filterStatusCombo.setValue("All Status");
-        filterStatusCombo.setOnAction(e -> filterFacilities());
 
         // Date and time pickers
         startDatePicker = new DatePicker(LocalDate.now());
@@ -284,9 +273,7 @@ public class StudentDashboard extends VBox {
         searchSection.setAlignment(Pos.CENTER_LEFT);
         searchSection.getChildren().addAll(
             new Label("Search:"), searchField,
-            new Label("Type:"), filterTypeCombo,
-            new Label("Location:"), filterLocationCombo,
-            new Label("Status:"), filterStatusCombo
+            new Label("Location:"), filterLocationCombo
         );
 
         // Facilities section
@@ -365,12 +352,9 @@ public class StudentDashboard extends VBox {
             .filter(f -> searchField.getText().isEmpty() ||
                         f.getName().toLowerCase().contains(searchField.getText().toLowerCase()) ||
                         f.getId().toLowerCase().contains(searchField.getText().toLowerCase()))
-            .filter(f -> filterTypeCombo.getValue().equals("All Types") ||
-                        f.getType().toString().contains(filterTypeCombo.getValue()))
             .filter(f -> filterLocationCombo.getValue().equals("All Locations") ||
                         f.getLocation().contains(filterLocationCombo.getValue()))
-            .filter(f -> filterStatusCombo.getValue().equals("All Status") ||
-                        f.getStatus().toString().equalsIgnoreCase(filterStatusCombo.getValue()))
+            .filter(f -> BookingPolicy.canUserBookFacility(currentUser, f)) // Only show facilities user can book
             .collect(Collectors.toList());
 
         filteredFacilitiesList.clear();
