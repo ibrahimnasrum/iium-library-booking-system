@@ -355,180 +355,294 @@ This layered architecture provides a solid foundation for the IIUM Library Booki
 | `ReservationPrivilege` | Access control levels | Ibrahim Bin Nasrum |
 | `BookingStatus` | Booking state management | Ibrahim Bin Nasrum |
 
-### Comprehensive UML Class Diagram
+### UML Class Diagram with Relationships
 
 The following UML class diagram provides a complete overview of the IIUM Library Booking System architecture, showing all classes, their relationships, attributes, and methods.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              MODEL LAYER                                        │
+│                          MODEL CLASSES                                          │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 
-+----------------+       +-----------------+       +-----------------+
-|      User      |       |    Facility     |       |    Equipment    |
-+----------------+       |  (Abstract)     |       +-----------------+
-| - userId       |       +-----------------+       | - name          |
-| - matricNo     |       | - id            |       | - description   |
-| - password     |       | - name          |       | - quantity      |
-| - name         |       | - type          |       +-----------------+
-| - role         |       | - location      |       | + toString()    |
-| - myBookings   |       | - capacity      |       +-----------------+
-+----------------+       | - privilege     |
-| + authenticate()|       | - status        |       +-----------------+
-| + hasRole()    |       | - imagePath     |       |      Room       |
-| + makeBooking()|       | - equipment     |       |  (Facility)     |
-| + cancelBooking|       | - notes         |       +-----------------+
-+----------------+       +-----------------+       | + Room()        |
-          │             | + isAvailable()  |       | + getDetailedInfo()|
-          │             | + getDetailedInfo|       +-----------------+
-          │             +-----------------+
-          │                       ▲
-          │                       │
-          │             +-----------------+
-          │             |    Booking      |
-          │             +-----------------+
-          │             | - bookingId     |
-          │             | - facilityId    |
-          │             | - userId        |
-          │             | - startTime     |
-          │             | - endTime       |
-          │             | - status        |
-          │             | - notes         |
-          │             +-----------------+
-          │             | + isActive()    |
-          │             | + isUpcoming()  |
-          │             | + isOngoing()   |
-          │             | + isCompleted() |
-          │             +-----------------+
-          │
-          ├─────────────────────┬─────────────────────┐
-          │                     │                     │
-          ▼                     ▼                     ▼
++---------------------+          +---------------------+
+|        User         |          |     Equipment       |
++---------------------+          +---------------------+
+| - userId: String    |          | - name: String      |
+| - matricNo: String  |          | - description: String|
+| - password: String  |          | - quantity: int     |
+| - name: String      |          +---------------------+
+| - role: Role        |          | + toString(): String|
+| - myBookings: List<Booking> |  +---------------------+
++---------------------+                 ▲
+| + authenticate(): boolean |           │
+| + hasRole(): boolean     |           │
+| + makeBooking(): boolean |           │
+| + cancelBooking(): boolean|          │
++---------------------+             │
+          │                          │
+          │ 1                    *   │
+          │                          │
+          ▼                          │
++---------------------+             │
+|     Booking         |             │
++---------------------+             │
+| - bookingId: String |             │
+| - facilityId: String|             │
+| - userId: String    |             │
+| - startTime: LocalDateTime|       │
+| - endTime: LocalDateTime  |       │
+| - status: BookingStatus   |       │
+| - notes: String           |       │
++---------------------+             │
+| + isActive(): boolean     |       │
+| + isUpcoming(): boolean   |       │
+| + isOngoing(): boolean    |       │
+| + isCompleted(): boolean  |       │
++---------------------+             │
+          │                          │
+          │                          │
+          ▼                          ▼
 
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                            SERVICE LAYER                                       │
-├─────────────────────────────────────────────────────────────────────────────────┤
++---------------------+          +---------------------+
+|   Facility          |◇─────────│        Room         |
+|   (Abstract)        |          +---------------------+
++---------------------+          |                     |
+| - id: String        |          +---------------------+
+| - name: String      |
+| - type: FacilityType|
+| - location: String  |
+| - capacity: int     |
+| - privilege: ReservationPrivilege|
+| - status: FacilityStatus|
+| - imagePath: String |
+| - equipment: List<Equipment>|
+| - notes: String     |
++---------------------+
+| + isAvailable(): boolean|
+| + getDetailedInfo(): String|
+| + addEquipment(): void|
+| + removeEquipment(): void|
++---------------------+
 
-+----------------+       +-----------------+       +-----------------+
-|  AuthService   |       | BookingService  |       | FacilityService |
-+----------------+       +-----------------+       +-----------------+
-| + authenticate()|      | + createBooking()|      | + getAllFacilities()|
-| + hasRole()    |      | + cancelBooking()|      | + getAccessibleFacilities()|
-| + isAdmin()    |      | + getBookingsByUser|    | + getFacilityById()|
-+----------------+       | + getBookingsByFacility| | + updateFacilityStatus()|
-                         | + hasBookingConflict|   | + searchFacilities()|
-                         +-----------------+       +-----------------+
-
-+-----------------+
-| BookingPolicy   |
-+-----------------+
-| + canBook()     |
-| + hasRequiredPrivilege|
-| + isValidDuration|
-| + hasMinimumAdvanceTime|
-| + isWithinAdvanceLimit|
-| + isWithinUserDailyLimit|
-| + hasUserBookingConflict|
-| + isWithinBusinessHours|
-| + canCancelBooking()|
-+-----------------+
-
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                             VIEW LAYER                                         │
-├─────────────────────────────────────────────────────────────────────────────────┤
-
-+----------------+       +-----------------+       +-----------------+
-| MainApplication|       |   MainLayout    |       |   LoginPage     |
-+----------------+       +-----------------+       +-----------------+
-| - primaryStage |       | - currentUser   |       | - matricNoField |
-| - currentUser  |       | - logoutCallback|       | - passwordField |
-+----------------+       | - pages         |       | - loginButton   |
-| + start()      |       | - buttons       |       +-----------------+
-| + main()       |       +-----------------+       | + LoginPage()   |
-+----------------+       | + showPage()    |       +-----------------+
-                         | + navigateToFacility|
-                         +-----------------+
-
-+----------------+       +-----------------+       +-----------------+
-| FacilitiesPage |       | FacilityDetailPage|    | MyBookingsPage  |
-+----------------+       +-----------------+       +-----------------+
-| - currentUser  |       | - currentUser   |       | - currentUser   |
-| - facilities   |       | - selectedFacility|     | - bookings      |
-| - searchField  |       | - datePicker    |       | - bookingList   |
-+----------------+       | - timePickers   |       +-----------------+
-| + refreshFacilities|   | - bookButton    |       | + cancelBooking()|
-| + filterFacilities|    | + validateBooking|      +-----------------+
-+----------------+       +-----------------+
-
-+----------------+       +-----------------+       +-----------------+
-| DashboardPage  |       | AdminPanelPage  |       | FacilityCard    |
-+----------------+       +-----------------+       +-----------------+
-| - currentUser  |       | - currentUser   |       | - facility      |
-| - stats        |       | - userList      |       | - imageView     |
-| - quickActions|       | - facilityList  |       | - nameLabel     |
-+----------------+       | - bookingList   |       | - statusLabel   |
-| + updateStats()|       +-----------------+       | - capacityLabel |
-+----------------+       | + manageUsers() |       +-----------------+
-                         | + manageFacilities|     | + FacilityCard()|
-                         | + viewBookings() |       +-----------------+
-                         +-----------------+
-
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          ENUMERATION CLASSES                                   │
-├─────────────────────────────────────────────────────────────────────────────────┤
-
-+----------------+       +-----------------+       +-----------------+
-|     Role       |       | FacilityStatus  |       | FacilityType    |
-+----------------+       +-----------------+       +-----------------+
-| ◇ ADMIN        |       | ◇ AVAILABLE     |       | ◇ STUDY_ROOM    |
-| ◇ STAFF        |       | ◇ BOOKED        |       | ◇ DISCUSSION_ROOM|
-| ◇ STUDENT      |       | ◇ MAINTENANCE   |       | ◇ COMPUTER_LAB  |
-| ◇ POSTGRADUATE |       | ◇ UNAVAILABLE   |       | ◇ AUDITORIUM     |
-+----------------+       +-----------------+       +-----------------+
-
-+----------------+       +-----------------+
-| ReservationPrivilege|  | BookingStatus   |
-+----------------+       +-----------------+
-| ◇ OPEN         |       | ◇ ACTIVE        |
-| ◇ STUDENT_ONLY |       | ◇ CANCELLED     |
-| ◇ STAFF_ONLY   |       | ◇ COMPLETED     |
-| ◇ POSTGRADUATE_ONLY|   | ◇ NO_SHOW       |
-| ◇ SPECIAL_NEEDS_ONLY|  +-----------------+
-| ◇ BOOK_VENDORS_ONLY|
-| ◇ LIBRARY_USE_ONLY|
-+----------------+
-
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          RELATIONSHIPS                                         │
-├─────────────────────────────────────────────────────────────────────────────────┤
-
-Association Relationships:
-• User "1" ─── "0..*" Booking (myBookings)
-• Facility "1" ─── "0..*" Equipment (equipment)
-• Booking "1" ─── "1" Facility (facilityId)
-• Booking "1" ─── "1" User (userId)
-
-Inheritance Relationships:
-• Room ────▷ Facility (extends)
-
-Dependency Relationships:
-• All View classes ────▷ Service classes (use services)
-• Service classes ────▷ Model classes (manipulate data)
-• View classes ────▷ Model classes (display data)
-
-Multiplicities:
-• One User can have multiple Bookings (1..*)
-• One Facility can have multiple Equipment items (0..*)
-• One Facility can have multiple Bookings over time (0..*)
-• Each Booking belongs to exactly one User and one Facility (1..1)
-
-Interface Contracts:
-• BookingPolicy defines business rules used by BookingService
-• AuthService provides authentication used by all View classes
-• FacilityService provides facility data used by multiple View classes
+Legend:
+■ Inheritance (Room extends Facility)
+◇ Aggregation (Facility contains Equipment)
+│ Association with multiplicity (1 User has * Bookings)
 ```
 
-#### Detailed Class Descriptions
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                       SERVICE CLASSES                                          │
+├─────────────────────────────────────────────────────────────────────────────────┤
+
++---------------------+          +---------------------+
+|   AuthService       |          |  BookingService     |
++---------------------+          +---------------------+
+|                     |          |                     |
++---------------------+          +---------------------+
+| + authenticate(): User|        | + createBooking(): Booking|
+| + hasRole(): boolean |         | + cancelBooking(): boolean|
+| + isAdmin(): boolean |         | + getBookingsByUser(): List|
+| + determineRole(): Role|       | + hasBookingConflict(): boolean|
++---------------------+          +---------------------+
+
++---------------------+          +---------------------+
+| FacilityService     |          |   BookingPolicy     |
++---------------------+          +---------------------+
+|                     |          |                     |
++---------------------+          +---------------------+
+| + getAllFacilities(): List|    | + canBook(): boolean|
+| + getAccessibleFacilities(): List| + hasRequiredPrivilege(): boolean|
+| + getFacilityById(): Facility| | + isValidDuration(): boolean|
+| + updateFacilityStatus(): boolean| + hasMinimumAdvanceTime(): boolean|
+| + searchFacilities(): List|    | + isWithinAdvanceLimit(): boolean|
++---------------------+          | + isWithinUserDailyLimit(): boolean|
+                                 | + hasUserBookingConflict(): boolean|
+                                 | + isWithinBusinessHours(): boolean|
+                                 +---------------------+
+```
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        VIEW CLASSES                                            │
+├─────────────────────────────────────────────────────────────────────────────────┤
+
++---------------------+          +---------------------+
+| MainApplication     |          |    MainLayout       |
++---------------------+          +---------------------+
+| - primaryStage: Stage|         | - currentUser: User |
+| - currentUser: User  |         | - logoutCallback: Runnable|
++---------------------+          +---------------------+
+| + start(): void      |         | + showPage(): void  |
+| + main(): void       |         | + navigateToFacility(): void|
++---------------------+          +---------------------+
+
++---------------------+          +---------------------+
+|   LoginPage         |          |  FacilitiesPage     |
++---------------------+          +---------------------+
+| - matricNoField: TextField|    | - currentUser: User |
+| - passwordField: PasswordField| | - facilities: List  |
+| - loginButton: Button|         | - searchField: TextField|
++---------------------+          +---------------------+
+| + LoginPage(): void  |         | + refreshFacilities(): void|
++---------------------+          | + filterFacilities(): void|
+                                 +---------------------+
+
++---------------------+          +---------------------+
+| FacilityDetailPage  |          |  MyBookingsPage     |
++---------------------+          +---------------------+
+| - currentUser: User  |         | - currentUser: User |
+| - selectedFacility: Facility|  | - bookings: List    |
+| - datePicker: DatePicker|     | - bookingList: ListView|
+| - timePickers: ComboBox|      +---------------------+
+| - bookButton: Button |         | + cancelBooking(): void|
++---------------------+          +---------------------+
+| + validateBooking(): String|   +---------------------+
++---------------------+
+
++---------------------+          +---------------------+
+|  DashboardPage      |          |  AdminPanelPage     |
++---------------------+          +---------------------+
+| - currentUser: User  |         | - currentUser: User |
+| - stats: Map         |         | - userList: ListView|
+| - quickActions: VBox |         | - facilityList: ListView|
++---------------------+          | - bookingList: ListView|
+| + updateStats(): void|         +---------------------+
+| + manageUsers(): void|
+| + manageFacilities(): void|
+| + viewBookings(): void|
++---------------------+
+
++---------------------+
+|   FacilityCard      |
++---------------------+
+| - facility: Facility|
+| - imageView: ImageView|
+| - nameLabel: Label   |
+| - statusLabel: Label |
+| - capacityLabel: Label|
++---------------------+
+| + FacilityCard(): void|
++---------------------+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                      ENUMERATION CLASSES                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+
++---------------------+          +---------------------+
+|       Role          |          |  FacilityStatus     |
++---------------------+          +---------------------+
+| ◇ ADMIN             |          | ◇ AVAILABLE         |
+| ◇ STAFF             |          | ◇ BOOKED            |
+| ◇ STUDENT           |          | ◇ MAINTENANCE       |
+| ◇ POSTGRADUATE      |          | ◇ UNAVAILABLE       |
++---------------------+          +---------------------+
+
++---------------------+          +---------------------+
+|   FacilityType      |          | ReservationPrivilege|
++---------------------+          +---------------------+
+| ◇ STUDY_ROOM        |          | ◇ OPEN              |
+| ◇ DISCUSSION_ROOM   |          | ◇ STUDENT_ONLY      |
+| ◇ COMPUTER_LAB      |          | ◇ STAFF_ONLY        |
+| ◇ AUDITORIUM        |          | ◇ POSTGRADUATE_ONLY |
++---------------------+          | ◇ SPECIAL_NEEDS_ONLY|
+                                 | ◇ BOOK_VENDORS_ONLY |
+                                 | ◇ LIBRARY_USE_ONLY  |
+                                 +---------------------+
+
++---------------------+
+|   BookingStatus     |
++---------------------+
+| ◇ ACTIVE            |
+| ◇ CANCELLED         |
+| ◇ COMPLETED         |
+| ◇ NO_SHOW           |
++---------------------+
+```
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                    RELATIONSHIP DIAGRAM                                        │
+├─────────────────────────────────────────────────────────────────────────────────┤
+
+┌─────────────────┐     1     ┌─────────────────┐
+│      User       │◄──────────│    Booking      │
+└─────────────────┘     *     └─────────────────┘
+         │
+         │ uses
+         ▼
+┌─────────────────┐     uses  ┌─────────────────┐
+│  AuthService    │◄──────────│ MainApplication │
+└─────────────────┘           └─────────────────┘
+         │
+         │ uses
+         ▼
+┌─────────────────┐     uses  ┌─────────────────┐
+│ BookingService  │◄──────────│ FacilityDetailPage│
+└─────────────────┘           └─────────────────┘
+         │
+         │ uses
+         ▼
+┌─────────────────┐     uses  ┌─────────────────┐
+│ FacilityService │◄──────────│  FacilitiesPage  │
+└─────────────────┘           └─────────────────┘
+         │
+         │ uses
+         ▼
+┌─────────────────┐     uses  ┌─────────────────┐
+│ BookingPolicy   │◄──────────│ All View Classes │
+└─────────────────┘           └─────────────────┘
+
+┌─────────────────┐     1     ┌─────────────────┐
+│   Facility      │◇──────────│   Equipment     │
+└─────────────────┘     *     └─────────────────┘
+
+┌─────────────────┐           ┌─────────────────┐
+│   Facility      │           │      Room       │
+│  (Abstract)     │           │                 │
+└─────────────────┘           └─────────────────┘
+         ▲
+         │ extends
+┌─────────────────┐
+│     Booking     │
+└─────────────────┘
+
+RELATIONSHIP LEGEND:
+═══════════════
+■ Inheritance: Child extends Parent
+◇ Aggregation: Whole contains Parts (Facility contains Equipment)
+◄── Association: Class A uses/associates with Class B
+1/* : Multiplicities (1 to many, etc.)
+uses: Dependency relationship
+```
+
+#### Key Relationships Explained:
+
+**1. Inheritance Relationships:**
+- `Room` **extends** `Facility` (inheritance)
+- Abstract `Facility` class is extended by concrete `Room` class
+
+**2. Association Relationships:**
+- `User` **associates with** `Booking` (1 User can have multiple Bookings)
+- `Booking` **associates with** `Facility` (1 Booking belongs to 1 Facility)
+- `Booking` **associates with** `User` (1 Booking belongs to 1 User)
+
+**3. Aggregation Relationships:**
+- `Facility` **aggregates** `Equipment` (Facility contains multiple Equipment items)
+- Equipment can exist independently of Facility
+
+**4. Dependency Relationships:**
+- All View classes **depend on** Service classes
+- Service classes **depend on** Model classes
+- View classes **depend on** Model classes for data display
+
+**5. Usage Relationships:**
+- `MainApplication` **uses** `AuthService` for authentication
+- `FacilitiesPage` **uses** `FacilityService` for data access
+- `FacilityDetailPage` **uses** `BookingService` for booking operations
+- All View classes **use** `BookingPolicy` for validation rules
+
+This UML diagram clearly shows the structural relationships and dependencies within the IIUM Library Booking System, making it easier to understand how different components interact and depend on each other.
 
 **Model Layer Classes:**
 
@@ -633,26 +747,7 @@ Interface Contracts:
 4. **ReservationPrivilege Enum**: Defines access control levels
 5. **BookingStatus Enum**: Defines booking state management
 
-This comprehensive UML diagram illustrates the complete architecture of the IIUM Library Booking System, showing how all components interact to provide a robust facility booking solution.
-| - bookingId    |       | (Facility)      |
-| - facilityId   |       +-----------------+
-| - userId       |       | + Room()        |
-| - startTime    |       | + getDetailedInfo()|
-| - endTime      |       +-----------------+
-| - status       |
-+----------------+
-| + validate()   |
-| + cancel()     |
-+----------------+
-
-Services Layer:
-+----------------+       +-----------------+       +-----------------+
-|  AuthService   |       | BookingService  |       | FacilityService |
-+----------------+       +-----------------+       +-----------------+
-| + authenticate()|      | + createBooking()|      | + getFacilities()|
-| + authorize()   |      | + validateBooking|      | + updateStatus() |
-+----------------+       | + cancelBooking()|      +-----------------+
-                         +-----------------+
+This UML diagram clearly shows the structural relationships and dependencies within the IIUM Library Booking System, making it easier to understand how different components interact and depend on each other.
 ```
 
 ### OOP Concepts Implemented
