@@ -149,7 +149,7 @@ With over 20,000 students and staff, the demand for these facilities is high, ma
 
 ### System Architecture
 
-The IIUM Library Booking System follows a layered architecture with clear separation of concerns:
+The IIUM Library Booking System follows a layered architecture with clear separation of concerns, designed to promote maintainability, scalability, and testability. This architectural pattern divides the system into distinct layers, each with specific responsibilities and well-defined interfaces.
 
 ```
 ┌─────────────────┐
@@ -166,6 +166,138 @@ The IIUM Library Booking System follows a layered architecture with clear separa
 │     Layer       │  (SessionManager, Static Data)
 └─────────────────┘
 ```
+
+#### Layer Descriptions and Responsibilities
+
+**1. Presentation Layer (UI Layer)**
+- **Purpose**: Handles all user interface interactions and visual presentation
+- **Components**: MainLayout, LoginPage, FacilitiesPage, FacilityDetailPage, MyBookingsPage, AdminPanelPage, FacilityCard
+- **Responsibilities**:
+  - Rendering the graphical user interface using JavaFX
+  - Capturing user inputs (button clicks, form submissions, navigation)
+  - Displaying data in user-friendly formats
+  - Managing UI state and navigation between screens
+  - Providing visual feedback for user actions
+- **Key Features**:
+  - Responsive design with proper layout management
+  - Event-driven programming with JavaFX event handlers
+  - CSS styling for consistent visual appearance
+  - Callback mechanisms for inter-component communication
+
+**2. Business Logic Layer (Service Layer)**
+- **Purpose**: Contains the core business rules and application logic
+- **Components**: AuthService, BookingService, FacilityService, BookingPolicy
+- **Responsibilities**:
+  - Implementing business rules and validation logic
+  - Coordinating operations between different parts of the system
+  - Enforcing security policies and access controls
+  - Managing complex workflows and transactions
+  - Providing a clean API for the presentation layer
+- **Key Features**:
+  - Centralized business rule enforcement
+  - Input validation and error handling
+  - Conflict detection and resolution
+  - Policy-based access control
+  - Service-oriented design for reusability
+
+**3. Data Access Layer (Model Layer)**
+- **Purpose**: Represents the data structures and business entities
+- **Components**: User, Facility, Room, Booking, Equipment, and all enumeration classes
+- **Responsibilities**:
+  - Defining the structure of business entities
+  - Encapsulating data and behavior of domain objects
+  - Providing data validation at the object level
+  - Supporting inheritance and polymorphism for flexible modeling
+  - Maintaining object relationships and constraints
+- **Key Features**:
+  - Object-oriented design with proper encapsulation
+  - Inheritance hierarchy (Room extends Facility)
+  - Comprehensive getter/setter methods
+  - Built-in validation and business rules
+  - Type-safe enumeration classes
+
+**4. Data Storage Layer (Persistence Layer)**
+- **Purpose**: Manages data persistence and storage operations
+- **Components**: In-memory data structures, static collections, session management
+- **Responsibilities**:
+  - Providing data persistence mechanisms
+  - Managing data lifecycle and consistency
+  - Handling concurrent access to shared data
+  - Supporting data querying and filtering
+  - Maintaining data integrity across operations
+- **Key Features**:
+  - In-memory storage for development/demo purposes
+  - Static data initialization for system setup
+  - Thread-safe data access patterns
+  - Data consistency validation
+  - Extensible design for future database integration
+
+#### Layer Interaction Patterns
+
+**Data Flow**:
+1. User interactions in the Presentation Layer trigger events
+2. Presentation Layer calls methods on the Business Logic Layer
+3. Business Logic Layer orchestrates operations using Data Access Layer objects
+4. Data Access Layer interacts with Data Storage Layer for persistence
+5. Results flow back up through the layers to update the UI
+
+**Dependency Direction**:
+- Presentation Layer depends on Business Logic Layer
+- Business Logic Layer depends on Data Access Layer
+- Data Access Layer depends on Data Storage Layer
+- Lower layers are independent of higher layers (Dependency Inversion)
+
+**Communication Interfaces**:
+- **Presentation ↔ Business Logic**: Method calls with callback functions
+- **Business Logic ↔ Data Access**: Direct object manipulation and service methods
+- **Data Access ↔ Data Storage**: Static method calls and collection access
+
+#### Architectural Benefits
+
+**1. Separation of Concerns**:
+- Each layer has a single, well-defined responsibility
+- Changes in one layer don't affect others
+- Easier to understand and maintain code
+
+**2. Maintainability**:
+- Isolated changes reduce regression testing
+- Clear interfaces make refactoring safer
+- Modular design supports incremental improvements
+
+**3. Testability**:
+- Each layer can be tested independently
+- Mock objects can substitute for lower layers
+- Unit tests focus on specific layer responsibilities
+
+**4. Scalability**:
+- Layers can be scaled independently
+- Business logic can be distributed across servers
+- UI can be adapted for different platforms
+
+**5. Reusability**:
+- Business logic services can be reused across different UIs
+- Data models work with multiple service implementations
+- Components can be shared across different views
+
+#### Implementation Considerations
+
+**Layer Boundaries**:
+- Strict enforcement of layer dependencies
+- No direct database calls from presentation layer
+- Business logic isolated from UI concerns
+- Data models remain persistence-agnostic
+
+**Error Handling**:
+- Exceptions bubble up through layers appropriately
+- Each layer handles its specific error types
+- User-friendly error messages in presentation layer
+
+**Performance Optimization**:
+- Lazy loading in data access layer
+- Caching mechanisms in service layer
+- Efficient UI updates in presentation layer
+
+This layered architecture provides a solid foundation for the IIUM Library Booking System, ensuring that the application remains maintainable, testable, and extensible as requirements evolve.
 
 ### Class Design and OOP Concepts
 
@@ -223,29 +355,285 @@ The IIUM Library Booking System follows a layered architecture with clear separa
 | `ReservationPrivilege` | Access control levels | Ibrahim Bin Nasrum |
 | `BookingStatus` | Booking state management | Ibrahim Bin Nasrum |
 
-### UML Class Diagram
+### Comprehensive UML Class Diagram
+
+The following UML class diagram provides a complete overview of the IIUM Library Booking System architecture, showing all classes, their relationships, attributes, and methods.
 
 ```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              MODEL LAYER                                        │
+├─────────────────────────────────────────────────────────────────────────────────┤
+
++----------------+       +-----------------+       +-----------------+
+|      User      |       |    Facility     |       |    Equipment    |
++----------------+       |  (Abstract)     |       +-----------------+
+| - userId       |       +-----------------+       | - name          |
+| - matricNo     |       | - id            |       | - description   |
+| - password     |       | - name          |       | - quantity      |
+| - name         |       | - type          |       +-----------------+
+| - role         |       | - location      |       | + toString()    |
+| - myBookings   |       | - capacity      |       +-----------------+
++----------------+       | - privilege     |
+| + authenticate()|       | - status        |       +-----------------+
+| + hasRole()    |       | - imagePath     |       |      Room       |
+| + makeBooking()|       | - equipment     |       |  (Facility)     |
+| + cancelBooking|       | - notes         |       +-----------------+
++----------------+       +-----------------+       | + Room()        |
+          │             | + isAvailable()  |       | + getDetailedInfo()|
+          │             | + getDetailedInfo|       +-----------------+
+          │             +-----------------+
+          │                       ▲
+          │                       │
+          │             +-----------------+
+          │             |    Booking      |
+          │             +-----------------+
+          │             | - bookingId     |
+          │             | - facilityId    |
+          │             | - userId        |
+          │             | - startTime     |
+          │             | - endTime       |
+          │             | - status        |
+          │             | - notes         |
+          │             +-----------------+
+          │             | + isActive()    |
+          │             | + isUpcoming()  |
+          │             | + isOngoing()   |
+          │             | + isCompleted() |
+          │             +-----------------+
+          │
+          ├─────────────────────┬─────────────────────┐
+          │                     │                     │
+          ▼                     ▼                     ▼
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            SERVICE LAYER                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+
++----------------+       +-----------------+       +-----------------+
+|  AuthService   |       | BookingService  |       | FacilityService |
++----------------+       +-----------------+       +-----------------+
+| + authenticate()|      | + createBooking()|      | + getAllFacilities()|
+| + hasRole()    |      | + cancelBooking()|      | + getAccessibleFacilities()|
+| + isAdmin()    |      | + getBookingsByUser|    | + getFacilityById()|
++----------------+       | + getBookingsByFacility| | + updateFacilityStatus()|
+                         | + hasBookingConflict|   | + searchFacilities()|
+                         +-----------------+       +-----------------+
+
++-----------------+
+| BookingPolicy   |
++-----------------+
+| + canBook()     |
+| + hasRequiredPrivilege|
+| + isValidDuration|
+| + hasMinimumAdvanceTime|
+| + isWithinAdvanceLimit|
+| + isWithinUserDailyLimit|
+| + hasUserBookingConflict|
+| + isWithinBusinessHours|
+| + canCancelBooking()|
++-----------------+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                             VIEW LAYER                                         │
+├─────────────────────────────────────────────────────────────────────────────────┤
+
++----------------+       +-----------------+       +-----------------+
+| MainApplication|       |   MainLayout    |       |   LoginPage     |
++----------------+       +-----------------+       +-----------------+
+| - primaryStage |       | - currentUser   |       | - matricNoField |
+| - currentUser  |       | - logoutCallback|       | - passwordField |
++----------------+       | - pages         |       | - loginButton   |
+| + start()      |       | - buttons       |       +-----------------+
+| + main()       |       +-----------------+       | + LoginPage()   |
++----------------+       | + showPage()    |       +-----------------+
+                         | + navigateToFacility|
+                         +-----------------+
+
++----------------+       +-----------------+       +-----------------+
+| FacilitiesPage |       | FacilityDetailPage|    | MyBookingsPage  |
++----------------+       +-----------------+       +-----------------+
+| - currentUser  |       | - currentUser   |       | - currentUser   |
+| - facilities   |       | - selectedFacility|     | - bookings      |
+| - searchField  |       | - datePicker    |       | - bookingList   |
++----------------+       | - timePickers   |       +-----------------+
+| + refreshFacilities|   | - bookButton    |       | + cancelBooking()|
+| + filterFacilities|    | + validateBooking|      +-----------------+
 +----------------+       +-----------------+
-|      User      |       |    Facility     |
+
++----------------+       +-----------------+       +-----------------+
+| DashboardPage  |       | AdminPanelPage  |       | FacilityCard    |
++----------------+       +-----------------+       +-----------------+
+| - currentUser  |       | - currentUser   |       | - facility      |
+| - stats        |       | - userList      |       | - imageView     |
+| - quickActions|       | - facilityList  |       | - nameLabel     |
++----------------+       | - bookingList   |       | - statusLabel   |
+| + updateStats()|       +-----------------+       | - capacityLabel |
++----------------+       | + manageUsers() |       +-----------------+
+                         | + manageFacilities|     | + FacilityCard()|
+                         | + viewBookings() |       +-----------------+
+                         +-----------------+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          ENUMERATION CLASSES                                   │
+├─────────────────────────────────────────────────────────────────────────────────┤
+
++----------------+       +-----------------+       +-----------------+
+|     Role       |       | FacilityStatus  |       | FacilityType    |
++----------------+       +-----------------+       +-----------------+
+| ◇ ADMIN        |       | ◇ AVAILABLE     |       | ◇ STUDY_ROOM    |
+| ◇ STAFF        |       | ◇ BOOKED        |       | ◇ DISCUSSION_ROOM|
+| ◇ STUDENT      |       | ◇ MAINTENANCE   |       | ◇ COMPUTER_LAB  |
+| ◇ POSTGRADUATE |       | ◇ UNAVAILABLE   |       | ◇ AUDITORIUM     |
++----------------+       +-----------------+       +-----------------+
+
 +----------------+       +-----------------+
-| - userId       |       | - id            |
-| - matricNo     |       | - name          |
-| - password     |       | - type          |
-| - name         |       | - location      |
-| - role         |       | - capacity      |
-| - myBookings   |       | - privilege     |
-+----------------+       | - status        |
-| + login()      |       | - equipment     |
-| + makeBooking()|       +-----------------+
-| + cancelBooking|       | + isAvailable() |
-+----------------+       | + getDetailedInfo()|
-          |             +-----------------+
-          |                       |
-          |                       |
+| ReservationPrivilege|  | BookingStatus   |
 +----------------+       +-----------------+
-|    Booking     |       |      Room       |
-+----------------+       +-----------------+
+| ◇ OPEN         |       | ◇ ACTIVE        |
+| ◇ STUDENT_ONLY |       | ◇ CANCELLED     |
+| ◇ STAFF_ONLY   |       | ◇ COMPLETED     |
+| ◇ POSTGRADUATE_ONLY|   | ◇ NO_SHOW       |
+| ◇ SPECIAL_NEEDS_ONLY|  +-----------------+
+| ◇ BOOK_VENDORS_ONLY|
+| ◇ LIBRARY_USE_ONLY|
++----------------+
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          RELATIONSHIPS                                         │
+├─────────────────────────────────────────────────────────────────────────────────┤
+
+Association Relationships:
+• User "1" ─── "0..*" Booking (myBookings)
+• Facility "1" ─── "0..*" Equipment (equipment)
+• Booking "1" ─── "1" Facility (facilityId)
+• Booking "1" ─── "1" User (userId)
+
+Inheritance Relationships:
+• Room ────▷ Facility (extends)
+
+Dependency Relationships:
+• All View classes ────▷ Service classes (use services)
+• Service classes ────▷ Model classes (manipulate data)
+• View classes ────▷ Model classes (display data)
+
+Multiplicities:
+• One User can have multiple Bookings (1..*)
+• One Facility can have multiple Equipment items (0..*)
+• One Facility can have multiple Bookings over time (0..*)
+• Each Booking belongs to exactly one User and one Facility (1..1)
+
+Interface Contracts:
+• BookingPolicy defines business rules used by BookingService
+• AuthService provides authentication used by all View classes
+• FacilityService provides facility data used by multiple View classes
+```
+
+#### Detailed Class Descriptions
+
+**Model Layer Classes:**
+
+1. **User Class**
+   - **Purpose**: Represents system users with authentication and booking management
+   - **Key Attributes**: userId, matricNo, password, name, role, myBookings
+   - **Key Methods**: authenticate(), hasRole(), makeBooking(), cancelBooking()
+   - **Relationships**: Has many Bookings, uses AuthService for authentication
+
+2. **Facility Abstract Class**
+   - **Purpose**: Base class for all bookable facilities
+   - **Key Attributes**: id, name, type, location, capacity, privilege, status, equipment
+   - **Key Methods**: isAvailable(), getDetailedInfo() (abstract)
+   - **Relationships**: Has many Equipment, extended by Room
+
+3. **Room Class**
+   - **Purpose**: Concrete implementation of bookable rooms
+   - **Key Methods**: Room() constructor, getDetailedInfo() implementation
+   - **Relationships**: Inherits from Facility
+
+4. **Booking Class**
+   - **Purpose**: Represents facility booking records
+   - **Key Attributes**: bookingId, facilityId, userId, startTime, endTime, status
+   - **Key Methods**: isActive(), isUpcoming(), isOngoing(), isCompleted()
+   - **Relationships**: Belongs to User and Facility
+
+5. **Equipment Class**
+   - **Purpose**: Represents equipment available in facilities
+   - **Key Attributes**: name, description, quantity
+   - **Key Methods**: toString()
+   - **Relationships**: Belongs to Facility
+
+**Service Layer Classes:**
+
+1. **AuthService Class**
+   - **Purpose**: Handles user authentication and authorization
+   - **Key Methods**: authenticate(), hasRole(), isAdmin()
+   - **Responsibilities**: Matric number validation, role determination
+
+2. **BookingService Class**
+   - **Purpose**: Manages booking creation, validation, and conflict detection
+   - **Key Methods**: createBooking(), cancelBooking(), hasBookingConflict()
+   - **Responsibilities**: Booking lifecycle management, conflict resolution
+
+3. **FacilityService Class**
+   - **Purpose**: Provides facility data access and management
+   - **Key Methods**: getAllFacilities(), getAccessibleFacilities(), searchFacilities()
+   - **Responsibilities**: Facility filtering, status updates, search functionality
+
+4. **BookingPolicy Class**
+   - **Purpose**: Enforces business rules and validation logic
+   - **Key Methods**: canBook(), isValidDuration(), hasMinimumAdvanceTime()
+   - **Responsibilities**: Business rule validation, access control, time constraints
+
+**View Layer Classes:**
+
+1. **MainApplication Class**
+   - **Purpose**: JavaFX application entry point
+   - **Key Methods**: start(), main()
+   - **Responsibilities**: Application lifecycle, initial login screen
+
+2. **MainLayout Class**
+   - **Purpose**: Main application layout with navigation
+   - **Key Methods**: showPage(), navigateToFacility()
+   - **Responsibilities**: Page navigation, sidebar management
+
+3. **LoginPage Class**
+   - **Purpose**: User authentication interface
+   - **Key Components**: Input fields, login button
+   - **Responsibilities**: Credential collection, authentication trigger
+
+4. **FacilitiesPage Class**
+   - **Purpose**: Facility browsing and search interface
+   - **Key Methods**: refreshFacilities(), filterFacilities()
+   - **Responsibilities**: Facility display, search/filter functionality
+
+5. **FacilityDetailPage Class**
+   - **Purpose**: Detailed facility view with booking functionality
+   - **Key Methods**: validateBooking()
+   - **Responsibilities**: Booking creation, facility information display
+
+6. **MyBookingsPage Class**
+   - **Purpose**: User's booking management interface
+   - **Key Methods**: cancelBooking()
+   - **Responsibilities**: Booking history, cancellation functionality
+
+7. **AdminPanelPage Class**
+   - **Purpose**: Administrative system management
+   - **Key Methods**: manageUsers(), manageFacilities(), viewBookings()
+   - **Responsibilities**: System administration, user/facility management
+
+8. **FacilityCard Class**
+   - **Purpose**: Individual facility display component
+   - **Key Components**: Image, labels, status indicators
+   - **Responsibilities**: Facility preview, click navigation
+
+**Enumeration Classes:**
+
+1. **Role Enum**: Defines user types (ADMIN, STAFF, STUDENT, POSTGRADUATE)
+2. **FacilityStatus Enum**: Defines facility availability states
+3. **FacilityType Enum**: Defines facility classifications
+4. **ReservationPrivilege Enum**: Defines access control levels
+5. **BookingStatus Enum**: Defines booking state management
+
+This comprehensive UML diagram illustrates the complete architecture of the IIUM Library Booking System, showing how all components interact to provide a robust facility booking solution.
 | - bookingId    |       | (Facility)      |
 | - facilityId   |       +-----------------+
 | - userId       |       | + Room()        |
