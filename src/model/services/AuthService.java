@@ -1,5 +1,9 @@
 package model.services;
 
+import model.Admin;
+import model.Staff;
+import model.Student;
+import model.Postgraduate;
 import model.User;
 import model.enums.Role;
 import java.util.HashMap;
@@ -16,20 +20,20 @@ public class AuthService {
 
     private static void createTestUsers() {
         // Admin users (matric starting with 0)
-        users.put("0123456", new User("0123456", "admin123", "Admin User", Role.ADMIN));
-        users.put("0987654", new User("0987654", "admin456", "Library Admin", Role.ADMIN));
+        users.put("0123456", new Admin("0123456", "admin123", "Admin User"));
+        users.put("0987654", new Admin("0987654", "admin456", "Library Admin"));
 
         // Staff users (matric starting with 1)
-        users.put("1123456", new User("1123456", "staff123", "Staff User", Role.STAFF));
-        users.put("1234567", new User("1234567", "staff456", "Librarian", Role.STAFF));
+        users.put("1123456", new Staff("1123456", "staff123", "Staff User"));
+        users.put("1234567", new Staff("1234567", "staff456", "Librarian"));
 
         // Student users (matric starting with 2)
-        users.put("2123456", new User("2123456", "student123", "Student User", Role.STUDENT));
-        users.put("2234567", new User("2234567", "student456", "Undergraduate", Role.STUDENT));
+        users.put("2123456", new Student("2123456", "student123", "Student User"));
+        users.put("2234567", new Student("2234567", "student456", "Undergraduate"));
 
         // Postgraduate users (matric starting with 3)
-        users.put("3123456", new User("3123456", "postgrad123", "Postgrad User", Role.POSTGRADUATE));
-        users.put("3234567", new User("3234567", "postgrad456", "PhD Student", Role.POSTGRADUATE));
+        users.put("3123456", new Postgraduate("3123456", "postgrad123", "Postgrad User"));
+        users.put("3234567", new Postgraduate("3234567", "postgrad456", "PhD Student"));
     }
 
     /**
@@ -47,7 +51,7 @@ public class AuthService {
         // For demo purposes, if user doesn't exist, create one based on matric pattern
         if (matricNo != null && !matricNo.isEmpty() && password != null && !password.isEmpty()) {
             Role role = determineRole(matricNo);
-            User newUser = new User(matricNo, password, "User " + matricNo, role);
+            User newUser = createUserByRole(matricNo, password, "User " + matricNo, role);
             users.put(matricNo, newUser);
             return newUser;
         }
@@ -71,6 +75,29 @@ public class AuthService {
             return Role.POSTGRADUATE; // Postgraduate matric numbers start with 3
         } else {
             return Role.STUDENT; // Default to student
+        }
+    }
+
+    /**
+     * Creates a user instance based on the specified role
+     * @param matricNo The matriculation number
+     * @param password The password
+     * @param name The user name
+     * @param role The user role
+     * @return The appropriate User subclass instance
+     */
+    private static User createUserByRole(String matricNo, String password, String name, Role role) {
+        switch (role) {
+            case ADMIN:
+                return new Admin(matricNo, password, name);
+            case STAFF:
+                return new Staff(matricNo, password, name);
+            case STUDENT:
+                return new Student(matricNo, password, name);
+            case POSTGRADUATE:
+                return new Postgraduate(matricNo, password, name);
+            default:
+                return new Student(matricNo, password, name); // Default to student
         }
     }
 

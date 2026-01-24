@@ -307,13 +307,17 @@ This layered architecture provides a solid foundation for the IIUM Library Booki
 
 | Class | Responsibility | Person In Charge |
 |-------|---------------|------------------|
-| `User` | User management, authentication, booking history | Muhammad Izwan Bin Muhammad Isham |
+| `User` (Abstract) | Abstract user base class with inheritance | Muhammad Izwan Bin Muhammad Isham |
+| `Admin` (extends User) | Administrative user with full privileges | Ibrahim Bin Nasrum |
+| `Staff` (extends User) | Staff user with enhanced privileges | Ibrahim Bin Nasrum |
+| `Student` (extends User) | Student user with basic privileges | Ibrahim Bin Nasrum |
+| `Postgraduate` (extends User) | Postgraduate user with enhanced student privileges | Ibrahim Bin Nasrum |
 | `Facility` (Abstract) | Base facility functionality, equipment management | Mohammad Amir Imtiyaz Bin Mohd Annuar |
 | `Room` (extends Facility) | Specific room implementation with IIUM facilities | Mohammad Amir Imtiyaz Bin Mohd Annuar |
 | `Booking` | Booking record management and validation | Ibrahim Bin Nasrum |
 | `Equipment` | Equipment tracking for facilities | Mohammad Amir Imtiyaz Bin Mohd Annuar |
 
-*Note: The model classes were distributed among team members with Mohammad Amir Imtiyaz Bin Mohd Annuar handling the facility-related classes (Facility, Room, Equipment), Muhammad Izwan Bin Muhammad Isham managing the User class, and Ibrahim Bin Nasrum responsible for the Booking class. This distribution allowed for specialized focus on different aspects of the data model.*
+*Note: The model classes were distributed among team members with Mohammad Amir Imtiyaz Bin Mohd Annuar handling the facility-related classes (Facility, Room, Equipment), Muhammad Izwan Bin Muhammad Isham managing the User base class, and Ibrahim Bin Nasrum responsible for the Booking class and User inheritance subclasses. This distribution allowed for specialized focus on different aspects of the data model.*
 
 **2. Service Classes**
 
@@ -365,9 +369,8 @@ The following UML class diagram provides a complete overview of the IIUM Library
 ├─────────────────────────────────────────────────────────────────────────────────┤
 
 +---------------------+          +---------------------+
-|        User         |
-|   (Standalone)      |          |     Equipment       |
-+---------------------+          +---------------------+
+|        User         |          |     Equipment       |
+|   (Abstract)        |          +---------------------+
 | - userId: String    |          | - name: String      |
 | - matricNo: String  |          | - description: String|
 | - password: String  |          | - quantity: int     |
@@ -379,11 +382,44 @@ The following UML class diagram provides a complete overview of the IIUM Library
 | + hasRole(): boolean     |           │
 | + makeBooking(): boolean |           │
 | + cancelBooking(): boolean|          │
+| + canAccessAdminPanel(): boolean|    │
+| + canBookSpecialFacilities(): boolean│
+| + getMaxBookingHours(): int|         │
 +---------------------+             │
-          │                          │
-          │ 1                    *   │
-          │                          │
-          ▼                          │
+          ▲                         │
+          │                         │
+          │                         │
+          │                         │
+          │                         │
+          ▼                         ▼
++---------------------+          +---------------------+
+|      Admin          |          |      Staff          |
++---------------------+          +---------------------+
+|                     |          |                     |
++---------------------+          +---------------------+
+| + canAccessAdminPanel(): true |  | + canAccessAdminPanel(): false|
+| + canBookSpecialFacilities(): true| + canBookSpecialFacilities(): true|
+| + getMaxBookingHours(): 8    |  | + getMaxBookingHours(): 4    |
++---------------------+          +---------------------+
+          ▲                         │
+          │                         │
+          │                         │
+          │                         │
+          │                         │
+          ▼                         ▼
++---------------------+          +---------------------+
+|    Student          |          |  Postgraduate       |
++---------------------+          +---------------------+
+|                     |          |                     |
++---------------------+          +---------------------+
+| + canAccessAdminPanel(): false|  | + canAccessAdminPanel(): false|
+| + canBookSpecialFacilities(): false| + canBookSpecialFacilities(): true|
+| + getMaxBookingHours(): 2    |  | + getMaxBookingHours(): 3    |
++---------------------+          +---------------------+
+          │                         │
+          │ 1                    *  │
+          │                         │
+          ▼                         │
 +---------------------+             │
 |     Booking         |             │
 +---------------------+             │
@@ -400,9 +436,9 @@ The following UML class diagram provides a complete overview of the IIUM Library
 | + isOngoing(): boolean    |       │
 | + isCompleted(): boolean  |       │
 +---------------------+             │
-          │                          │
-          │                          │
-          ▼                          ▼
+          │                         │
+          │                         │
+          ▼                         ▼
 
 +---------------------+          +---------------------+
 |   Facility          |◇─────────│        Room         |
@@ -426,7 +462,7 @@ The following UML class diagram provides a complete overview of the IIUM Library
 +---------------------+
 
 Legend:
-■ Inheritance (Room extends Facility)
+■ Inheritance (Room extends Facility, User subclasses extend User)
 ◇ Aggregation (Facility contains Equipment)
 │ Association with multiplicity (1 User has * Bookings)
 ```
@@ -691,11 +727,11 @@ contains: Composition relationship
 - `MyBookingsPage` **contains** `ListView`, `Button` (UI components are composed within the page)
 - UI components are destroyed when their containing view is destroyed
 
-**5. User Class Clarification:**
-- `User` is a **standalone class** that does not extend any other class
-- It represents the core business entity for system users
-- Contains authentication and booking management functionality
-- Has associations with `Booking` objects but no inheritance relationships
+**5. User Class Hierarchy:**
+- `User` is an **abstract base class** that defines common user functionality
+- It implements role-based inheritance with four concrete subclasses: `Admin`, `Staff`, `Student`, `Postgraduate`
+- Each subclass provides specific privilege implementations for admin access, special facility booking, and booking duration limits
+- The hierarchy enables polymorphic behavior while maintaining type safety and encapsulation
 
 **6. Dependency Relationships:**
 - All View classes **depend on** Service classes
@@ -710,13 +746,34 @@ contains: Composition relationship
 
 **Model Layer Classes:**
 
-1. **User Class**
-   - **Purpose**: Represents system users with authentication and booking management
+1. **User Class (Abstract)**
+   - **Purpose**: Abstract base class for all system users with role-specific behavior
    - **Key Attributes**: userId, matricNo, password, name, role, myBookings
-   - **Key Methods**: authenticate(), hasRole(), makeBooking(), cancelBooking()
-   - **Relationships**: Has many Bookings, uses AuthService for authentication
+   - **Key Methods**: authenticate(), hasRole(), makeBooking(), cancelBooking(), canAccessAdminPanel(), canBookSpecialFacilities(), getMaxBookingHours()
+   - **Relationships**: Extended by Admin, Staff, Student, Postgraduate; has many Bookings
+   - **Subclasses**: Admin (full access), Staff (limited admin), Student (basic), Postgraduate (enhanced student)
 
-2. **Facility Abstract Class**
+2. **Admin Class**
+   - **Purpose**: Administrative users with full system access
+   - **Privileges**: canAccessAdminPanel=true, canBookSpecialFacilities=true, maxBookingHours=8
+   - **Relationships**: Inherits from User
+
+3. **Staff Class**
+   - **Purpose**: Library staff with enhanced booking privileges
+   - **Privileges**: canAccessAdminPanel=false, canBookSpecialFacilities=true, maxBookingHours=4
+   - **Relationships**: Inherits from User
+
+4. **Student Class**
+   - **Purpose**: Regular students with basic booking access
+   - **Privileges**: canAccessAdminPanel=false, canBookSpecialFacilities=false, maxBookingHours=2
+   - **Relationships**: Inherits from User
+
+5. **Postgraduate Class**
+   - **Purpose**: Postgraduate students with enhanced privileges
+   - **Privileges**: canAccessAdminPanel=false, canBookSpecialFacilities=true, maxBookingHours=3
+   - **Relationships**: Inherits from User
+
+6. **Facility Abstract Class**
    - **Purpose**: Base class for all bookable facilities
    - **Key Attributes**: id, name, type, location, capacity, privilege, status, equipment
    - **Key Methods**: isAvailable(), getDetailedInfo() (abstract)
@@ -2411,7 +2468,7 @@ public class MyBookingsPage extends VBox {
 
 ---
 
-**Note**: Due to space limitations, only key source code files are included in this appendix. The complete source code with all classes, methods, and implementation details is available in the project repository. The team contributed as follows: Ibrahim Bin Nasrum (10 classes), Mohammad Amir Imtiyaz Bin Mohd Annuar (7 classes), Muhammad Izwan Bin Muhammad Isham (7 classes).
+**Note**: Due to space limitations, only key source code files are included in this appendix. The complete source code with all classes, methods, and implementation details is available in the project repository. The team contributed as follows: Ibrahim Bin Nasrum (14 classes), Mohammad Amir Imtiyaz Bin Mohd Annuar (7 classes), Muhammad Izwan Bin Muhammad Isham (7 classes).
 
 **Project Repository**: The complete source code is available at the GitHub repository provided in the project submission.
 
@@ -2420,8 +2477,20 @@ public class MyBookingsPage extends VBox {
 **Main.java** - Application entry point
 *Person in charge: Muhammad Izwan Bin Muhammad Isham*
 
-**User.java** - User management and authentication
+**User.java** - Abstract user base class with inheritance
 *Person in charge: Muhammad Izwan Bin Muhammad Isham*
+
+**Admin.java** - Administrative user subclass
+*Person in charge: Ibrahim Bin Nasrum*
+
+**Staff.java** - Staff user subclass
+*Person in charge: Ibrahim Bin Nasrum*
+
+**Student.java** - Student user subclass
+*Person in charge: Ibrahim Bin Nasrum*
+
+**Postgraduate.java** - Postgraduate user subclass
+*Person in charge: Ibrahim Bin Nasrum*
 
 **Facility.java** - Abstract facility base class
 *Person in charge: Mohammad Amir Imtiyaz Bin Mohd Annuar*

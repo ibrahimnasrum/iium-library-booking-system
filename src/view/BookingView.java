@@ -14,10 +14,10 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import model.User;
+import model.Student;
 import model.Room;
 import model.Booking;
 import model.enums.Role;
-import model.Booking;
 import model.Room;
 import model.User;
 
@@ -51,7 +51,7 @@ public class BookingView extends Application {
     @Override
     public void start(Stage primaryStage) {
         // Initialize demo user
-        currentUser = new User("2112345", "password123", "Ibrahim", Role.STUDENT);
+        currentUser = new Student("2112345", "password123", "Ibrahim");
         roomsList = FXCollections.observableArrayList(User.getAllRooms());
         filteredRoomsList = FXCollections.observableArrayList(roomsList);
         bookingsList = FXCollections.observableArrayList(currentUser.getMyBookings());

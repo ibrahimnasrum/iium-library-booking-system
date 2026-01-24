@@ -5,15 +5,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class User {
-    private String userId;
-    private String matricNo;
-    private String password;
-    private String name;
-    private Role role;
-    private List<Booking> myBookings;
-    private static List<Room> allRooms = new ArrayList<>();
-    private static int userCounter = 1;
+public abstract class User {
+    protected String userId;
+    protected String matricNo;
+    protected String password;
+    protected String name;
+    protected Role role;
+    protected List<Booking> myBookings;
+    protected static List<Room> allRooms = new ArrayList<>();
+    protected static int userCounter = 1;
 
     public User(String matricNo, String password, String name, Role role) {
         this.userId = "U" + String.format("%04d", userCounter++);
@@ -108,9 +108,25 @@ public class User {
         if (matricNo != null && !matricNo.isEmpty() && password != null && !password.isEmpty()) {
             Role role = matricNo.startsWith("2") ? Role.STAFF :
                        matricNo.startsWith("1") ? Role.ADMIN : Role.STUDENT;
-            return new User(matricNo, password, "User", role);
+            return createUserByRole(matricNo, password, "User", role);
         }
         return null;
+    }
+
+    // Helper method to create user by role
+    private static User createUserByRole(String matricNo, String password, String name, Role role) {
+        switch (role) {
+            case ADMIN:
+                return new Admin(matricNo, password, name);
+            case STAFF:
+                return new Staff(matricNo, password, name);
+            case STUDENT:
+                return new Student(matricNo, password, name);
+            case POSTGRADUATE:
+                return new Postgraduate(matricNo, password, name);
+            default:
+                return new Student(matricNo, password, name);
+        }
     }
 
     // Make a booking
@@ -140,6 +156,11 @@ public class User {
         }
         return false;
     }
+
+    // Abstract methods for role-specific behavior
+    public abstract boolean canAccessAdminPanel();
+    public abstract boolean canBookSpecialFacilities();
+    public abstract int getMaxBookingHours();
 
     // Getters
     public String getUserId() {
