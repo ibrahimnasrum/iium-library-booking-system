@@ -365,7 +365,8 @@ The following UML class diagram provides a complete overview of the IIUM Library
 ├─────────────────────────────────────────────────────────────────────────────────┤
 
 +---------------------+          +---------------------+
-|        User         |          |     Equipment       |
+|        User         |
+|   (Standalone)      |          |     Equipment       |
 +---------------------+          +---------------------+
 | - userId: String    |          | - name: String      |
 | - matricNo: String  |          | - description: String|
@@ -469,6 +470,7 @@ Legend:
 
 +---------------------+          +---------------------+
 | MainApplication     |          |    MainLayout       |
+|   (extends Application)       |   (extends VBox)     |
 +---------------------+          +---------------------+
 | - primaryStage: Stage|         | - currentUser: User |
 | - currentUser: User  |         | - logoutCallback: Runnable|
@@ -478,36 +480,64 @@ Legend:
 +---------------------+          +---------------------+
 
 +---------------------+          +---------------------+
-|   LoginPage         |          |  FacilitiesPage     |
+|   LoginPage         |◆─────────│   TextField         |
+|   (extends VBox)    |          +---------------------+
++---------------------+          | - matricField       |
+| - matricNoField: TextField|    +---------------------+
+| - passwordField: PasswordField|
+| - loginButton: Button|         +---------------------+
+| - statusLabel: Label |         |   PasswordField      |
 +---------------------+          +---------------------+
-| - matricNoField: TextField|    | - currentUser: User |
-| - passwordField: PasswordField| | - facilities: List  |
-| - loginButton: Button|         | - searchField: TextField|
+| + LoginPage(): void  |         | - passwordField      |
 +---------------------+          +---------------------+
-| + LoginPage(): void  |         | + refreshFacilities(): void|
-+---------------------+          | + filterFacilities(): void|
-                                 +---------------------+
 
 +---------------------+          +---------------------+
-| FacilityDetailPage  |          |  MyBookingsPage     |
+| FacilitiesPage      |◆─────────│   TextField         |
+|   (extends VBox)    |          +---------------------+
++---------------------+          | - searchField       |
+| - currentUser: User |          +---------------------+
+| - facilities: List  |
+| - searchField: TextField|      +---------------------+
+| - facilityCards: List|         |   ScrollPane        |
 +---------------------+          +---------------------+
-| - currentUser: User  |         | - currentUser: User |
-| - selectedFacility: Facility|  | - bookings: List    |
-| - datePicker: DatePicker|     | - bookingList: ListView|
-| - timePickers: ComboBox|      +---------------------+
-| - bookButton: Button |         | + cancelBooking(): void|
+| + refreshFacilities(): void|   | - facilitiesScroll  |
+| + filterFacilities(): void|    +---------------------+
++---------------------+
+
 +---------------------+          +---------------------+
+| FacilityDetailPage  |◆─────────│   DatePicker        |
+|   (extends VBox)    |          +---------------------+
++---------------------+          | - datePicker        |
+| - currentUser: User  |         +---------------------+
+| - selectedFacility: Facility|
+| - datePicker: DatePicker|      +---------------------+
+| - timePickers: ComboBox|       |   ComboBox          |
+| - bookButton: Button |         +---------------------+
++---------------------+          | - timePickers       |
 | + validateBooking(): String|   +---------------------+
 +---------------------+
 
 +---------------------+          +---------------------+
-|  DashboardPage      |          |  AdminPanelPage     |
+|  MyBookingsPage     |◆─────────│   ListView          |
+|   (extends VBox)    |          +---------------------+
++---------------------+          | - bookingList       |
+| - currentUser: User |          +---------------------+
+| - bookings: List    |
+| - bookingList: ListView|       +---------------------+
++---------------------+          |   Button            |
+| + cancelBooking(): void|       +---------------------+
++---------------------+          | - cancelButtons     |
+                                 +---------------------+
+
 +---------------------+          +---------------------+
-| - currentUser: User  |         | - currentUser: User |
-| - stats: Map         |         | - userList: ListView|
-| - quickActions: VBox |         | - facilityList: ListView|
-+---------------------+          | - bookingList: ListView|
-| + updateStats(): void|         +---------------------+
+|  AdminPanelPage     |◆─────────│   ListView          |
+|   (extends VBox)    |          +---------------------+
++---------------------+          | - userList          |
+| - currentUser: User |          | - facilityList      |
+| - userList: ListView|          | - bookingList       |
+| - facilityList: ListView|      +---------------------+
+| - bookingList: ListView|
++---------------------+
 | + manageUsers(): void|
 | + manageFacilities(): void|
 | + viewBookings(): void|
@@ -515,6 +545,7 @@ Legend:
 
 +---------------------+
 |   FacilityCard      |
+|   (extends VBox)    |
 +---------------------+
 | - facility: Facility|
 | - imageView: ImageView|
@@ -607,19 +638,42 @@ Legend:
 │     Booking     │
 └─────────────────┘
 
+┌─────────────────┐           ┌─────────────────┐
+│  LoginPage      │           │   TextField     │
+│  (VBox)         │           │                 │
+└─────────────────┘           └─────────────────┘
+         ◆
+         │ contains
+┌─────────────────┐
+│ PasswordField   │
+└─────────────────┘
+
+┌─────────────────┐           ┌─────────────────┐
+│ FacilitiesPage  │           │   ScrollPane    │
+│  (VBox)         │           │                 │
+└─────────────────┘           └─────────────────┘
+         ◆
+         │ contains
+┌─────────────────┐
+│  FacilityCard   │
+└─────────────────┘
+
 RELATIONSHIP LEGEND:
 ═══════════════
-■ Inheritance: Child extends Parent
-◇ Aggregation: Whole contains Parts (Facility contains Equipment)
+■ Inheritance: Child extends Parent (Room extends Facility, View classes extend JavaFX components)
+◇ Aggregation: Whole contains Parts, parts can exist independently (Facility contains Equipment)
+◆ Composition: Whole contains Parts, parts cannot exist without the whole (View contains UI components)
 ◄── Association: Class A uses/associates with Class B
 1/* : Multiplicities (1 to many, etc.)
 uses: Dependency relationship
+contains: Composition relationship
 ```
 
 #### Key Relationships Explained:
 
 **1. Inheritance Relationships:**
 - `Room` **extends** `Facility` (inheritance)
+- `LoginPage`, `FacilitiesPage`, `FacilityDetailPage`, etc. **extend** JavaFX components like `VBox`
 - Abstract `Facility` class is extended by concrete `Room` class
 
 **2. Association Relationships:**
@@ -631,18 +685,28 @@ uses: Dependency relationship
 - `Facility` **aggregates** `Equipment` (Facility contains multiple Equipment items)
 - Equipment can exist independently of Facility
 
-**4. Dependency Relationships:**
+**4. Composition Relationships:**
+- `LoginPage` **contains** `TextField`, `PasswordField`, `Button` (UI components cannot exist without the page)
+- `FacilitiesPage` **contains** `ScrollPane`, `FacilityCard` (UI components are part of the page)
+- `MyBookingsPage` **contains** `ListView`, `Button` (UI components are composed within the page)
+- UI components are destroyed when their containing view is destroyed
+
+**5. User Class Clarification:**
+- `User` is a **standalone class** that does not extend any other class
+- It represents the core business entity for system users
+- Contains authentication and booking management functionality
+- Has associations with `Booking` objects but no inheritance relationships
+
+**6. Dependency Relationships:**
 - All View classes **depend on** Service classes
 - Service classes **depend on** Model classes
 - View classes **depend on** Model classes for data display
 
-**5. Usage Relationships:**
+**7. Usage Relationships:**
 - `MainApplication` **uses** `AuthService` for authentication
 - `FacilitiesPage` **uses** `FacilityService` for data access
 - `FacilityDetailPage` **uses** `BookingService` for booking operations
 - All View classes **use** `BookingPolicy` for validation rules
-
-This UML diagram clearly shows the structural relationships and dependencies within the IIUM Library Booking System, making it easier to understand how different components interact and depend on each other.
 
 **Model Layer Classes:**
 
