@@ -846,7 +846,10 @@ This UML diagram clearly shows the structural relationships and dependencies wit
 - `FacilityService` associated with `Facility` management
 - UI pages associated with navigation callbacks
 
-#### 7. **Dependency Injection**
+#### 7. **Aggregation**
+Aggregation is shown through "whole-part" relationships where the whole contains parts that can exist independently. For example, a Facility contains Equipment items and a User contains Booking records to represent "what equipment the facility has" and "what bookings the user has made".
+
+#### 8. **Dependency Injection**
 - Service classes injected into UI components
 - Callback functions passed to UI components
 - User object passed through the application layers
